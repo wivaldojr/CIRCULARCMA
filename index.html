@@ -37,7 +37,7 @@
         let marcadorOnibus = null;
 
         // Escuta o Firebase em tempo real
-        db.ref('bus/LINHA-101').on('value', (snapshot) => {
+        db.ref('buses/LINHA-101').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const { lat, lng } = data;
