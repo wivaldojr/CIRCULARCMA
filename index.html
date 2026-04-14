@@ -1,39 +1,56 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <title>Localização em Tempo Real</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel do Motorista</title>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; width: 100%; }
+        body { margin: 0; }
+    </style>
 </head>
 <body>
-    <h1>Transmitindo Localização...</h1>
-    <div id="status">Aguardando GPS...</div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database-compat.js"></script>
 
     <script>
-        // COLE SUAS CONFIGURAÇÕES DO FIREBASE AQUI
-        const firebaseConfig = { /* ... */ };
+       
+            const firebaseConfig = {
+  apiKey: "AIzaSyD9Qz_EQwwLbseGGEOPTSw6LokZtr7C7p4",
+  authDomain: "circularcma-bae6c.firebaseapp.com",
+  databaseURL: "https://circularcma-bae6c-default-rtdb.firebaseio.com",
+  projectId: "circularcma-bae6c",
+  storageBucket: "circularcma-bae6c.firebasestorage.app",
+  messagingSenderId: "449165898696",
+  appId: "1:449165898696:web:c577cf6fbc140536e2c6fd"
+};
+     
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        function atualizarPosicao() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.watchPosition((pos) => {
-                    const dados = {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        timestamp: Date.now()
-                    };
-                    
-                    // Salva no nó "onibus/001"
-                    db.ref('onibus/001').set(dados);
-                    document.getElementById('status').innerText = `Enviando: ${dados.lat}, ${dados.lng}`;
-                }, error => console.error(error), { enableHighAccuracy: true });
+        // Inicializa o mapa focado no Brasil (ou sua cidade)
+        const map = L.map('map').setView([-23.55, -46.63], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        let marcadorOnibus = null;
+
+        // Escuta o Firebase em tempo real
+        db.ref('onibus/001').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const { lat, lng } = data;
+
+                if (marcadorOnibus) {
+                    marcadorOnibus.setLatLng([lat, lng]); // Move o ícone suavemente
+                } else {
+                    marcadorOnibus = L.marker([lat, lng]).addTo(map).bindPopup("Ônibus 001");
+                }
+                map.panTo([lat, lng]); // Centraliza o mapa no ônibus
             }
-        }
-        
-        window.onload = atualizarPosicao;
+        });
     </script>
 </body>
 </html>
