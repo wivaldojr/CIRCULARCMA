@@ -50,8 +50,12 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
 
 /* ── Mapa ── */
 #map { flex: 1; }
-.leaflet-tile { filter: brightness(.85) saturate(.8) hue-rotate(195deg); }
+/* .leaflet-tile { filter: brightness(.85) saturate(.8) hue-rotate(195deg); }
 .leaflet-container { background: #0a0f1e; }
+    */
+.leaflet-tile { filter: brightness(.85) saturate(.9) hue-rotate(195deg) contrast(1.05); }
+    .leaflet-container { background: var(--bg); }
+    
 
 /* ── Rodapé ── */
 .bottom-panel {
