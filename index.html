@@ -145,7 +145,10 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
   document.getElementById('lineLabel').textContent = busId;
 
   // ── Mapa ──────────────────────────────────────
-  const map = L.map('map', { zoomControl: true, attributionControl: false })
+  let map, marker, firstLoad = true;
+
+  
+  map = L.map('map', { zoomControl: true, attributionControl: false })
                .setView([ -5.67165, -36.6046], 14);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
