@@ -160,8 +160,10 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
     className: '', iconSize: [42, 42], iconAnchor: [21, 21]
   });
 
-  const marker = L.marker([0, 0], { icon: busIcon });
-  let firstLoad = true;
+ 
+  let marker, firstLoad = true;
+
+  marker = L.marker([0, 0], { icon: busIcon });
 
   // ── Firebase ──────────────────────────────────
   const status  = document.getElementById('status');
@@ -208,9 +210,9 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
     badgeText.textContent = 'OFFLINE';
   }
 
-        window.centerMap = function () {
-    if (busMarker && map.hasLayer(busMarker)) {
-      map.flyTo(busMarker.getLatLng(), 16, { animate: true, duration: 1 });
+  window.centerMap = function () {
+    if (marker && map.hasLayer(marker)) {
+      map.flyTo(marker.getLatLng(), 16, { animate: true, duration: 1 });
     }
   };
 </script>
