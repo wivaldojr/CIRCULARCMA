@@ -204,7 +204,7 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
 
   const db = getDatabase(initializeApp(firebaseConfig));
 
-  const busId = new URLSearchParams(location.search).get('bus') || 'LINHA-101';
+  const busId = new URLSearchParams(location.search).get('bus') || 'CIRCULAR-UFERSA';
   document.getElementById('lineLabel').textContent = busId;
 
   // ── Mapa ──────────────────────────────────────
