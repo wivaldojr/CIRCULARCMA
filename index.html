@@ -111,6 +111,13 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
       <div class="value" id="lng">—</div>
     </div>
     <div class="status" id="status">Aguardando dados…</div>
+
+    <div class="info-grid">
+      <button class="center-btn" onclick="centerMap()">📍 Centralizar no Ônibus</button>
+    </div>
+
+
+    
   </div>
 
 </div>
@@ -200,6 +207,12 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
     badge.className = 'badge off';
     badgeText.textContent = 'OFFLINE';
   }
+
+        window.centerMap = function () {
+    if (busMarker && map.hasLayer(busMarker)) {
+      map.flyTo(busMarker.getLatLng(), 16, { animate: true, duration: 1 });
+    }
+  };
 </script>
 
 </body>
