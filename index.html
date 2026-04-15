@@ -54,6 +54,16 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
 .leaflet-container { background: #0a0f1e; }
 
 /* ── Rodapé ── */
+.bottom-panel {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 14px 16px;
+      z-index: 500;
+    }
+
+
+    
 .footer {
   flex-shrink: 0;
   display: grid;
@@ -111,15 +121,10 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
       <div class="value" id="lng">—</div>
     </div>
     <div class="status" id="status">Aguardando dados…</div>
-
-    <div class="info-grid">
-      <button class="center-btn" onclick="centerMap()">📍 Centralizar no Ônibus</button>
-    </div>
-
-
-    
   </div>
-
+   <div class="bottom-panel"">
+      <button class="center-btn" onclick="centerMap()">📍 Centralizar no Ônibus</button>
+   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
