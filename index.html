@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Localização do Ônibus</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+```
+html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #f1f5f9; }
+
+.app { display: flex; flex-direction: column; height: 100dvh; }
+
+/* ── Topo ── */
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #111827;
+  border-bottom: 1px solid #1e293b;
+}
+
+.topbar-title { font-size: 1rem; font-weight: bold; }
+.topbar-title span { color: #f97316; }
+
+.badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.3);
+  border-radius: 50px;
+  padding: 4px 12px;
+  font-size: .68rem;
+  color: #22c55e;
+}
+.badge.off { background: rgba(100,116,139,.1); border-color: rgba(100,116,139,.3); color: #64748b; }
+
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e;
+  animation: blink 1.3s ease-in-out infinite;
+}
+.badge.off .dot { background: #64748b; animation: none; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ── Mapa ── */
+#map { flex: 1; }
+.leaflet-tile { filter: brightness(.85) saturate(.8) hue-rotate(195deg); }
+.leaflet-container { background: #0a0f1e; }
+
+/* ── Rodapé ── */
+.footer {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #111827;
+  border-top: 1px solid #1e293b;
+}
+
+.box {
+  background: #0a0f1e;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.label { font-size: .6rem; color: #64748b; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
+.value { font-size: 1rem; color: #fbbf24; font-weight: bold; }
+
+.status {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: .7rem;
+  color: #64748b;
+  padding-top: 2px;
+}
+.status.ok  { color: #22c55e; }
+.status.err { color: #ef4444; }
+```
+
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="topbar-title">🚌 Ônibus <span id="lineLabel">—</span></div>
+    <div class="badge off" id="badge">
+      <div class="dot"></div>
+      <span id="badgeText">OFFLINE</span>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="footer">
+    <div class="box">
+      <div class="label">Latitude</div>
+      <div class="value" id="lat">—</div>
+    </div>
+    <div class="box">
+      <div class="label">Longitude</div>
+      <div class="value" id="lng">—</div>
+    </div>
+    <div class="status" id="status">Aguardando dados…</div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ── SUBSTITUA PELOS SEUS DADOS DO FIREBASE ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyDemo_SUBSTITUA_PELA_SUA_CHAVE",
+    authDomain: "seu-projeto.firebaseapp.com",
+    databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com",
+    projectId: "seu-projeto",
+    storageBucket: "seu-projeto.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:abcdefabcdef"
+  };
+  // ────────────────────────────────────────────
+
+  const db = getDatabase(initializeApp(firebaseConfig));
+
+  const busId = new URLSearchParams(location.search).get('bus') || 'LINHA-101';
+  document.getElementById('lineLabel').textContent = busId;
+
+  // ── Mapa ──────────────────────────────────────
+  const map = L.map('map', { zoomControl: true, attributionControl: false })
+               .setView([-15.8, -47.9], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  const busIcon = L.divIcon({
+    html: `<div style="
+      background:linear-gradient(135deg,#f97316,#fbbf24);
+      border-radius:50%;width:42px;height:42px;
+      display:flex;align-items:center;justify-content:center;font-size:20px;
+      box-shadow:0 0 0 4px rgba(249,115,22,.3),0 4px 16px rgba(249,115,22,.5);
+      border:3px solid #fff;">🚌</div>`,
+    className: '', iconSize: [42, 42], iconAnchor: [21, 21]
+  });
+
+  const marker = L.marker([0, 0], { icon: busIcon });
+  let firstLoad = true;
+
+  // ── Firebase ──────────────────────────────────
+  const status  = document.getElementById('status');
+  const badge   = document.getElementById('badge');
+  const badgeText = document.getElementById('badgeText');
+  let offlineTimer;
+
+  onValue(
+    ref(db, 'buses/' + busId),
+    (snap) => {
+      clearTimeout(offlineTimer);
+
+      if (!snap.exists()) {
+        setOffline('Sem dados para esta linha.');
+        return;
+      }
+
+      const { lat, lng } = snap.val();
+      if (lat == null || lng == null) { setOffline('Coordenadas ausentes.'); return; }
+
+      // Atualiza UI
+      document.getElementById('lat').textContent = lat.toFixed(6);
+      document.getElementById('lng').textContent = lng.toFixed(6);
+      status.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+      status.className = 'status ok';
+      badge.className = 'badge';
+      badgeText.textContent = 'AO VIVO';
+
+      // Atualiza mapa
+      const pos = [lat, lng];
+      marker.setLatLng(pos);
+      if (!map.hasLayer(marker)) marker.addTo(map);
+      if (firstLoad) { map.setView(pos, 16); firstLoad = false; }
+
+      offlineTimer = setTimeout(() => setOffline('Sem atualização há mais de 30s.'), 30000);
+    },
+    (err) => setOffline('Erro: ' + err.message)
+  );
+
+  function setOffline(msg) {
+    status.textContent = msg;
+    status.className = 'status err';
+    badge.className = 'badge off';
+    badgeText.textContent = 'OFFLINE';
+  }
+</script>
+
+</body>
+</html>
