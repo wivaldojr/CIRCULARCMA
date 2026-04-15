@@ -64,8 +64,18 @@ body {
   border-bottom: 1px solid #1e293b;
 }
 
-.topbar-title { font-size: 1rem; font-weight: bold; color: #ffffff; }
-.topbar-title span { color: #f97316; }
+/*.topbar-title { font-size: 1rem; font-weight: bold; color: #ffffff; }
+.topbar-title span { color: #f97316; }*/
+
+.topbar-title {
+      font-size: 1rem;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+.topbar-title span { color: var(--accent); }
 
 .badge {
   display: flex; align-items: center; gap: 6px;
