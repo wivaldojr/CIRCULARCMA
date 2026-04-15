@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Localização do Ônibus</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      background: #0a0f1e;
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      gap: 24px;
+      padding: 24px;
+    }
+
+```
+h1 { font-size: 1.4rem; margin: 0; }
+h1 span { color: #f97316; }
+
+.box {
+  background: #111827;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 20px 32px;
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+}
+
+.label { font-size: .7rem; color: #64748b; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
+.value { font-size: 1.5rem; color: #fbbf24; font-weight: bold; }
+
+.status { font-size: .75rem; color: #64748b; }
+.status.ok { color: #22c55e; }
+.status.err { color: #ef4444; }
+```
+
+  </style>
+</head>
+<body>
+  <h1>🚌 Ônibus <span id="lineLabel">—</span></h1>
+
+  <div class="box">
+    <div class="label">Latitude</div>
+    <div class="value" id="lat">—</div>
+  </div>
+
+  <div class="box">
+    <div class="label">Longitude</div>
+    <div class="value" id="lng">—</div>
+  </div>
+
+  <div class="status" id="status">Aguardando dados…</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // ── SUBSTITUA PELOS SEUS DADOS DO FIREBASE ──
+    const firebaseConfig = {
+apiKey: "AIzaSyDmjnJhMGaK48EDMU8NnJDGbYTMN7hBbnU",
+    authDomain: "circular-ufersa.firebaseapp.com",
+    projectId: "circular-ufersa",
+    storageBucket: "circular-ufersa.firebasestorage.app",
+    messagingSenderId: "479839491222",
+    appId: "1:479839491222:web:8849e08b6d5c8d66dbdeb7"
+      
+     
+    };
+    // ────────────────────────────────────────────
+
+    const db = getDatabase(initializeApp(firebaseConfig));
+
+    const busId = new URLSearchParams(location.search).get('bus') || 'LINHA-101';
+    document.getElementById('lineLabel').textContent = busId;
+
+    const status = document.getElementById('status');
+
+    onValue(
+      ref(db, 'buses/' + busId),
+      (snap) => {
+        if (!snap.exists()) {
+          status.textContent = 'Sem dados para esta linha.';
+          status.className = 'status err';
+          return;
+        }
+        const { lat, lng } = snap.val();
+        document.getElementById('lat').textContent = lat != null ? lat.toFixed(6) : '—';
+        document.getElementById('lng').textContent = lng != null ? lng.toFixed(6) : '—';
+        status.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+        status.className = 'status ok';
+      },
+      (err) => {
+        status.textContent = 'Erro: ' + err.message;
+        status.className = 'status err';
+      }
+    );
+  </script>
+
+</body>
+</html>
