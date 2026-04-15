@@ -71,11 +71,21 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
 
 /* ── Rodapé ── */
 .bottom-panel {
+/*
       flex-shrink: 0;
       background: var(--surface);
       border-top: 1px solid var(--border);
       padding: 14px 16px;
       z-index: 500;
+  */
+  
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #111827;
+      border-top: 1px solid #1e293b;
     }
 
 .info-grid {
@@ -166,7 +176,7 @@ html, body { height: 100%; font-family: monospace; background: #0a0f1e; color: #
    <div class="status" id="status">Aguardando dados…</div>
   </div>  
    
-  <div class="bottom-panel">
+   <div class="bottom-panel">
      <button class="center-btn" onclick="centerMap()">📍 Centralizar no Ônibus</button>
    </div>
   
