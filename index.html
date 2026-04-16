@@ -294,7 +294,7 @@ body {
   map = L.map('map', { zoomControl: true, attributionControl: false })
                .setView([ -5.67165, -36.6046], 14);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 25 }).addTo(map);
 
   map.on('click', function(e) {alert("You clicked the map at " + e.latlng.toString()); });
 
