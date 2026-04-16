@@ -303,31 +303,24 @@ body {
      
     let rota = 
       [
+            [-5.655635, -36.615688, "GARAGEM"],
+            [-5.655117, -36.61513, "RESTAURANTE UNIVERSITÁRIO"],
             [-5.654135, -36.613553, "BLOCO DE AULAS 1"],  //BLOCO DE SALA 1
-            [-5.654653, -36.613795, ""],
-            [-5.654978, -36.613137, ""],
-            [-5.655061, -36.612982, ""], 
-            [-5.655061, -36.612982, ""],
-            [-5.655107, -36.612871, ""],
-            [-5.655912, -36.609643, ""],
-            [-5.655912, -36.609643, ""],
-            [-5.655149, -36.612767, ""],
             [-5.65722, -36.607599, "CANAÃ"],  //PARADA DO CANAÃ
-            [-5.657858, -36.606488, ""],
             [-5.658251, -36.605946, "CAPELA"], //PARADA DA CAPELA
-            [-5.663228, -36.608795, ""],
             [-5.661606, -36.607923, "PADARIA"], //PADARIA
-            [-5.663228, -36.608795, ""],
-            [-5.664037, -36.60941, ""],
-            [-5.664157, -36.609042, ""],
             [-5.664248, -36.608457, "RESIDENCIA"]  //RESIDENCIA
       ]
 
-
   L.Routing.control({
   waypoints: [
-    L.latLng(-5.654135, -36.613553),
-    L.latLng(-5.664248, -36.608457)
+    L.latLng(-5.655635, -36.615688),  //GARAGEM
+    L.latlng(-5.655117, -36.61513),   //RESTAURANTE UNIVERSITÁRIO
+    L.latLng(-5.654135, -36.613553),  //BLOCO DE SALA 1
+    L.latLng(-5.65722, -36.607599),   //CANAÃ
+    L.latLng(-5.658251, -36.605946),  //CAPELA
+    L.latLng(-5.661606, -36.607923),  //PADARIA
+    L.latLng(-5.664248, -36.608457)   //RESIDENCIA
   ],
   routeWhileDragging: true // Optional: interactive route
 }).addTo(map);
@@ -350,7 +343,7 @@ body {
      //L.circleMarker([-5.654135, -36.613553], {radius: 3}).addTo(map);
     // L.marker(rota).addTo(map);
   
-   let listaOngsBichinhos =
+  /* let listaOngsBichinhos =
                     [
                         [-5.654135, -36.613553, "Quatro Patas - Curitiba/PR"],
                         [-5.654653, -36.613795, "Centro de Apoio à Fauna Silvestre (CAFS) - Curitiba/PR"],
