@@ -320,6 +320,13 @@ body {
     [-5.664248, -36.608457, "RESIDENCIA"]  //RESIDENCIA
       
    ];
+
+
+  for (let i = 0; i < rota.length; i++) {
+                    const [coordenadaLat, coordenadaLng, texto] = rota[i]
+                    marcador = new L.marker([coordenadaLat, coordenadaLng]).bindPopup(texto).addTo(map);
+                }
+
    
    
  /*  var polyline = L.polyline(rota, {
