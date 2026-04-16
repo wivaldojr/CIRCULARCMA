@@ -322,6 +322,14 @@ body {
       ]
 
 
+  L.Routing.control({
+  waypoints: [
+    L.latLng(-5.654135, -36.613553),
+    L.latLng(-5.664248, -36.608457)
+  ],
+  routeWhileDragging: true // Optional: interactive route
+}).addTo(map);
+
  /* for (let i = 0; i < rota.length; i++) {
                     const [coordenadaLat, coordenadaLng, texto] = rota[i]
                     marcador = new L.marker([coordenadaLat, coordenadaLng]).bindPopup(texto).addTo(map);
