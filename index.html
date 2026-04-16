@@ -296,6 +296,8 @@ body {
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
+  map.on('click', function(e) {alert("You clicked the map at " + e.latlng.toString()); });
+
      
     var rota = [
     [-5.65417, -36.61352],
