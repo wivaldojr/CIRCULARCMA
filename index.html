@@ -401,8 +401,11 @@ const PARADAS = [
 
   // Mapa com tiles escuros
 const map = L.map('map', { zoomControl: true }).setView([-5.67165, -36.6046], 15);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-  attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 16
+//L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  //attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 16
+  
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap', maxZoom: 20
 }).addTo(map);
 
  map.on('click', function(e) {alert("You clicked the map at " + e.latlng.toString()); });
