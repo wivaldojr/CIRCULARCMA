@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIRCULAR UFERSA — Acompanhe ao vivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #002D4D; /*#0a0a0a;*/
+    --yellow: #FFD100;
+    --white: #f5f5f0;
+    --gray: #151515;
+    --panel: #002D4D; /*#1a1a1a;*/
+    --panel2: #222;
+    --green: #30d158;
+    --red: #ff3b30;
+    --blue: #0a84ff;
+    --orange: #ff9f0a;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'IBM Plex Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--gray);
+    border-bottom: 2px solid var(--yellow);
+    padding: 0 16px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+
+  .header-left {display: flex; align-items: center; gap: 12px; }
+
+  .line-badge {
+    background: var(--yellow);
+    color: var(--black);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    padding: 2px 12px;
+    border-radius: 3px;
+  }
+
+  .line-name {
+    font-size: 16px;
+    color: var(--white); /*#666;*/
+    letter-spacing: 1.5px;
+    line-height: 1.8;
+    text-transform: uppercase;
+  }
+
+  .live-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(48,209,88,0.1);
+    border: 1px solid rgba(48,209,88,0.3);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 2px;
+    transition: all 0.3s;
+  }
+  .live-pill.offline { background: rgba(255,59,48,0.1); border-color: rgba(255,59,48,0.3); color: var(--red); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink 1.2s infinite; }
+  .offline .live-dot { background: var(--red); animation: none; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ── PRÓXIMA PARADA MONITOR ── */
+  .next-stop-monitor {
+    background: var(--panel);
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 12px;
+    min-height: 64px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .next-stop-monitor::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--yellow);
+    width: var(--progress, 0%);
+    transition: width 1s linear;
+  }
+
+  .monitor-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .stop-icon-wrap {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(255,209,0,0.12);
+    border: 2px solid var(--yellow);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    animation: stop-pulse 2s infinite;
+  }
+  @keyframes stop-pulse {
+    0%,100%{ box-shadow: 0 0 0 0 rgba(255,209,0,0.3); }
+    50%    { box-shadow: 0 0 0 8px rgba(255,209,0,0); }
+  }
+
+  .monitor-text { min-width: 0; }
+  .monitor-label { font-size: 19px; letter-spacing: 2px; color: var(--white); text-transform: uppercase; margin-bottom: 3px; }
+  .monitor-stop-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--yellow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 1px;
+    transition: color 0.4s;
+  }
+  .monitor-stop-name.arriving { color: var(--green); animation: arrive-flash 0.6s ease 3; }
+  @keyframes arrive-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .monitor-right { text-align: right; flex-shrink: 0; }
+  .monitor-dist { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--white); line-height: 1; }
+  .monitor-dist-unit { font-size: 10px; color: #555; letter-spacing: 1px; }
+
+  /* ── LAYOUT PRINCIPAL ── */
+  .main-area { flex: 1; display: flex; overflow: hidden; position: relative; }
+  #map { flex: 1; width: 100%; }
+  .leaflet-tile { filter: brightness(0.9) saturate(0.85); }
+
+  /* ── PAINEL LATERAL DE PARADAS ── */
+  .stops-panel {
+    width: 200px;
+    background: var(--gray);
+    border-left: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .stops-panel-title {
+    padding: 10px 12px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+  }
+
+  .stops-list {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+
+  .stop-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1e1e1e;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .stop-item:hover { background: rgba(255,255,255,0.03); }
+  .stop-item.active { background: rgba(255,209,0,0.06); }
+  .stop-item.passed { opacity: 0.35; }
+
+  .stop-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 3px; }
+  .stop-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid #444;
+    background: #0a0a0a;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .stop-item.passed .stop-dot  { background: var(--green);  border-color: var(--green); }
+  .stop-item.active .stop-dot  { background: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 0 4px rgba(255,209,0,0.2); }
+  .stop-connector { width: 2px; flex: 1; min-height: 18px; background: #2a2a2a; margin: 2px 0; transition: background 0.3s; }
+  .stop-item.passed .stop-connector { background: var(--green); }
+
+  .stop-info { flex: 1; min-width: 0; }
+  .stop-num  { font-size: 9px; color: #444; letter-spacing: 1px; margin-bottom: 1px; }
+  .stop-name { font-size: 11px; color: #888; line-height: 1.3; transition: color 0.3s; }
+  .stop-item.active .stop-name { color: var(--yellow); font-weight: 600; }
+  .stop-item.passed .stop-name { color: #555; }
+  .stop-dist-label { font-size: 9px; color: #444; margin-top: 2px; letter-spacing: 0.5px; }
+  .stop-item.active .stop-dist-label { color: var(--orange); }
+
+  /* ── BOTTOM BAR ── */
+  .bottom {
+    background: var(--panel);
+    border-top: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .info-item { display: flex; flex-direction: column; gap: 2px; }
+  .info-label { font-size: 8px; letter-spacing: 2px; color: #555; text-transform: uppercase; }
+  .info-value { font-size: 13px; color: var(--white); font-weight: 600; }
+  .info-value.yellow { color: var(--yellow); }
+  .info-value.green  { color: var(--green); }
+
+  .btn-center {
+    background: var(--yellow);
+    color: var(--black);
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 7px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn-center:hover { opacity: 0.85; }
+
+  /* ── MARCADORES ── */
+  .bus-icon-wrap {
+    background: var(--yellow);
+    border: 3px solid var(--black);
+    border-radius: 50%;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.6);
+    animation: pulse-bus 2s infinite;
+  }
+  @keyframes pulse-bus {
+    0%,100%{ box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.5); }
+    50%    { box-shadow: 0 0 0 10px rgba(255,209,0,0.05), 0 4px 12px rgba(0,0,0,0.5); }
+  }
+
+  .stop-marker {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 2px solid #444;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    transition: all 0.3s;
+  }
+  .stop-marker.next   { border-color: var(--yellow); background: rgba(255,209,0,0.15); box-shadow: 0 0 0 4px rgba(255,209,0,0.2); }
+  .stop-marker.passed { border-color: var(--green);  background: rgba(48,209,88,0.1); opacity: 0.6; }
+
+  .leaflet-popup-content-wrapper {
+    background: var(--panel) !important;
+    border: 1px solid var(--yellow) !important;
+    border-radius: 4px !important;
+    color: var(--white) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 12px !important;
+    box-shadow: 4px 4px 0 rgba(255,209,0,0.15) !important;
+  }
+  .leaflet-popup-tip { background: var(--panel) !important; }
+  .leaflet-popup-close-button { color: #666 !important; }
+
+  .no-signal {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    background: rgba(10,10,10,0.92);
+    border: 2px solid var(--red);
+    padding: 24px 32px;
+    text-align: center;
+    border-radius: 4px;
+    z-index: 999;
+    display: none;
+  }
+  .no-signal h2 { font-family: 'Bebas Neue'; font-size: 26px; color: var(--red); margin-bottom: 6px; }
+  .no-signal p  { font-size: 10px; color: #666; letter-spacing: 1px; }
+
+  @media (max-width: 500px) {
+    .stops-panel { display: none; }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     NAVEGAÇÃO ENTRE TELAS (início / itinerários / mapa)
+     ══════════════════════════════════════════════════════════ */
+  .hidden { display: none !important; }
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+  .btn-back {
+    background: none;
+    border: 1px solid #3a4a5a;
+    color: var(--white);
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn-back svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* ── telas claras (início e itinerários) ── */
+  .light-view {
+    background: #fbfbfb;
+    color: #1d1d1f;
+    font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* ── TELA INICIAL ── */
+  .home-wrap {
+    flex: 1;
+    width: 100%; max-width: 480px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    overflow-y: auto;
+  }
+  .home-campus { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: #7a7a7a; margin-bottom: 34px; }
+  .home-logo {
+    width: min(46vw, 200px); height: min(46vw, 200px);
+    border-radius: 50%;
+    background: #0f1b33;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-size: 72px;
+    margin-bottom: 30px;
+    flex-shrink: 0;
+  }
+  .home-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .home-title { font-size: clamp(34px, 9vw, 46px); line-height: 1.15; font-weight: 700; color: #333; margin-bottom: 16px; }
+  .home-desc { font-size: 15px; line-height: 1.6; color: #6b6b6b; max-width: 340px; margin-bottom: 32px; }
+  .home-desc b { color: #333; }
+
+  .btn-home {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 18px;
+    border-radius: 18px;
+    font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .btn-home svg { width: 22px; height: 22px; fill: currentColor; }
+  .btn-home.primary { background: #0a1a33; color: #fff; border: 2px solid #0a1a33; }
+  .btn-home.outline { background: #fff; color: #0a1a33; border: 2px solid #0a1a33; }
+
+  .erro-dados {
+    width: 100%;
+    background: #fdecea; color: #a1281c;
+    border: 1px solid #f3b9b3; border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 12px; line-height: 1.5; text-align: left;
+  }
+
+  /* ── TELA DE ITINERÁRIOS ── */
+  .itin-head { background: #0a1a33; flex-shrink: 0; }
+  .itin-head-in { max-width: 640px; margin: 0 auto; width: 100%; }
+  .itin-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px 10px; color: #fff; }
+  .itin-bar h2 { font-size: 18px; font-weight: 600; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.12); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+  .itin-tabs { display: flex; gap: 26px; padding: 0 20px; }
+  .tab {
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: #8b95a8;
+    font-family: inherit; font-weight: 600; font-size: 14px; letter-spacing: 0.5px;
+    padding: 10px 0 12px;
+    cursor: pointer;
+  }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  .itin-body { flex: 1; overflow-y: auto; }
+  .itin-inner { max-width: 640px; margin: 0 auto; padding: 20px 16px 32px; }
+  .itin-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #8a90a0; margin: 0 2px 10px; }
+
+  .itin-times { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; margin-bottom: 8px; scrollbar-width: thin; }
+  .chip {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 12px 20px;
+    border-radius: 14px;
+    border: 1px solid #dfe3ec;
+    background: #fff;
+    color: #1b2540;
+    transition: all 0.2s;
+  }
+  .chip-h { font-size: 17px; font-weight: 700; }
+  .chip.done { opacity: 0.45; }
+  .chip.current { background: #0a1a33; border-color: #0a1a33; color: var(--yellow); box-shadow: 0 4px 14px rgba(10,26,51,0.3); opacity: 1; }
+
+  .itin-status {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border: 1px solid #dfe3ec; border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+  }
+  .st-icon { width: 48px; height: 48px; border-radius: 50%; background: #eef0f6; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .st-txt { flex: 1; min-width: 0; }
+  .st-t { font-size: 13px; font-weight: 700; color: #1b2540; }
+  .st-h { font-size: 15px; font-weight: 700; color: #1b2540; margin-top: 2px; }
+  .st-badge { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; white-space: nowrap; background: #e8eaf0; color: #55607a; }
+  .st-badge.live { background: #d9f7e3; color: #157a36; }
+  .st-badge.wait { background: #fff1c2; color: #8a6500; }
+
+  .itin-stops { background: #fff; border: 1px solid #e1e4ec; border-radius: 16px; overflow: hidden; }
+
+  /* lista de paradas no tema claro */
+  .light-view .stop-item { padding: 14px 16px; border-bottom: 1px solid #eceef4; align-items: center; }
+  .light-view .stop-item:last-child { border-bottom: none; }
+  .light-view .stop-item:hover { background: #f6f7fb; }
+  .light-view .stop-line { margin-top: 0; }
+  .light-view .stop-dot { background: #fff; border-color: #b8bfd0; }
+  .light-view .stop-name { font-size: 14px; color: #44506b; }
+  .light-view .stop-item.active { background: #fff8d6; opacity: 1; }
+  .light-view .stop-item.active .stop-name { color: #0a1a33; font-weight: 600; }
+  .light-view .stop-item.passed .stop-name { color: #9aa3b8; }
+  .badge-prox { display: none; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 9px; border-radius: 20px; background: var(--yellow); color: #0a1a33; flex-shrink: 0; }
+  .stop-item.active .badge-prox { display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ TELA INICIAL ══════════ -->
+<section id="view-home" class="view light-view">
+  <div class="home-wrap">
+    <div class="home-campus">🎓 UFERSA • CAMPUS ANGICOS</div>
+    <div class="home-logo"><img src="BUS.png" alt="" onerror="this.parentNode.textContent='🚌'"></div>
+    <h1 class="home-title">Rota -<br>UFERSA</h1>
+    <p class="home-desc">Sistema inteligente de monitoramento do transporte universitário para o campus <b>Angicos</b>.</p>
+
+    <button class="btn-home primary" onclick="mostrarTela('map')">
+      <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+      MAPA EM TEMPO REAL
+    </button>
+    <button class="btn-home outline" onclick="mostrarTela('itin')">
+      <svg viewBox="0 0 24 24"><path d="M19 15.18V7c0-2.21-1.79-4-4-4s-4 1.79-4 4v10c0 1.1-.9 2-2 2s-2-.9-2-2V8.82C8.16 8.4 9 7.3 9 6c0-1.66-1.34-3-3-3S3 4.34 3 6c0 1.3.84 2.4 2 2.82V17c0 2.21 1.79 4 4 4s4-1.79 4-4V7c0-1.1.9-2 2-2s2 .9 2 2v8.18c-1.16.41-2 1.51-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82z"/></svg>
+      INFORMAÇÕES DE ROTAS
+    </button>
+
+    <div id="erro-dados" class="erro-dados hidden"></div>
+  </div>
+</section>
+
+<!-- ══════════ TELA DE ITINERÁRIOS ══════════ -->
+<section id="view-itin" class="view light-view hidden">
+  <div class="itin-head">
+    <div class="itin-head-in">
+      <div class="itin-bar">
+        <button class="icon-btn" onclick="mostrarTela('home')" aria-label="Voltar">
+          <svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </button>
+        <h2>Informações de Rotas</h2>
+        <button class="icon-btn" onclick="mostrarTela('map')" aria-label="Mapa em tempo real">
+          <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+        </button>
+      </div>
+      <div class="itin-tabs" id="itin-tabs"></div>
+    </div>
+  </div>
+
+  <div class="itin-body">
+    <div class="itin-inner">
+      <div class="itin-label">HORÁRIOS DE SAÍDA</div>
+      <div class="itin-times" id="itin-times"></div>
+      <div class="itin-status" id="itin-status"></div>
+
+      <div class="itin-label">PARADAS DA LINHA</div>
+      <div class="itin-stops" id="itin-stops-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ TELA DO MAPA ══════════ -->
+<div id="view-map" class="view hidden">
+<header>
+  <div class="header-left">
+    <button class="btn-back" onclick="mostrarTela('home')" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+    <div class="bus-icon-wrap"><img src="BUS.png" alt="Logo" style="width: 140%; height: auto;"></div>
+    <div class="line-name">CIRCULAR - UFERSA</div>
+  </div>
+  <div class="live-pill" id="live-pill">
+    <div class="live-dot"></div>
+    AO VIVO
+  </div>
+</header>
+
+<div class="next-stop-monitor" id="next-monitor">
+  <div class="monitor-left">
+    <div class="stop-icon-wrap"><img src="parada5_verde.png" alt="Logo" style="width: 100%; height: auto;"></div>
+    <div class="monitor-text">
+      <div class="monitor-label">Próxima parada</div> <div class="monitor-stop-name" id="next-stop-name">Aguardando ônibus...</div>
+    </div>
+  </div>
+  <div class="monitor-right">
+    <div class="monitor-dist" id="next-stop-dist">—</div>
+    <div class="monitor-dist-unit" id="next-stop-unit">metros</div>
+  </div>
+</div>
+
+<div class="main-area">
+  <div id="map"></div>
+
+  <div class="no-signal" id="no-signal">
+    <h2>SEM SINAL</h2>
+    <p>O ônibus ainda não iniciou<br>o rastreamento.</p>
+  </div>
+
+  <div class="stops-panel">
+    <div class="stops-panel-title">Paradas da linha</div>
+    <div class="stops-list" id="stops-list"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="info-item">
+    <span class="info-label">Atualizado às</span>
+    <span class="info-value" id="last-update">—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Precisão GPS</span>
+    <span class="info-value green" id="accuracy">—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Parada</span>
+    <span class="info-value yellow" id="stop-counter">—/—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Itinerário</span>
+    <span class="info-value yellow" id="itin-info">—</span>
+  </div>
+  <button class="btn-center" onclick="centralizar()">⊙ CENTRALIZAR</button>
+</div>
+</div><!-- /view-map -->
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────
+const API_URL = 'https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+const ARQ_PARADAS  = 'paradas.txt';
+const ARQ_HORARIOS = 'horarios.txt';
+
+const POLL_INTERVAL        = 5000;  // consulta à API a cada 5 segundos
+const CHEGADA_METROS       = 20;    // "chegando" na parada
+const PASSAGEM_METROS      = 50;    // passou pela parada se chegou a menos disso e depois se afastou
+const JANELA_ANTES_MIN     = 5;     // a viagem começa X min antes do horário do itinerário (antes disso mostra o próximo horário)
+const TOLERANCIA_FIM_MIN   = 5;     // depois de horário + duração + isso, o itinerário é dado como encerrado
+const SINAL_MAX_SEG        = 180;   // posição mais antiga que isso = ônibus não está enviando localização
+const SEM_SINAL_CANCELA_MIN = 10;   // sem sinal por X min durante a viagem = viagem cancelada
+const MOVIMENTO_METROS     = 30;    // ônibus parado na parada 1 só "parte" depois de se afastar disso do ponto onde começou
+const RAIO_INICIO_M        = 150;   // ônibus a menos disso da parada 1 = saída normal
+const DURACAO_ESTIMADA_MIN = 20;    // duração aproximada do circuito (ressincroniza quem abre a página no meio da viagem e encerra o horário)
+const API_TS_UTC           = false; // true se o "timestamp" da API estiver em UTC (false = horário local)
+
+// Abra a página com ?teste no final do endereço para ignorar horário e idade do sinal
+const MODO_TESTE = new URLSearchParams(location.search).has('teste');
+
+  // Mapa com tiles escuros
+const map = L.map('map', { zoomControl: true }).setView([-5.67165, -36.6046], 15);
+  //L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  //attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 16
+  
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap', maxZoom: 20
+}).addTo(map);
+
+ if (MODO_TESTE) map.on('click', function(e) {alert("You clicked the map at " + e.latlng.toString()); });
+
+ const controleRota = L.Routing.control({
+  			waypoints: [
+  					/*
+  					new L.Routing.Waypoint(L.latLng(-5.655635, -36.615688), "GARAGEM"),
+    				new L.Routing.Waypoint(L.latLng(-5.655117, -36.61513), "RESTAURANTE UNIVERSITÁRIO"),
+    				*/
+   					new L.Routing.Waypoint(L.latLng(-5.654135, -36.613553), "BLOCO DE SALA 1"),
+   					new L.Routing.Waypoint(L.latLng(-5.654653, -36.613789), "p0"),
+   					new L.Routing.Waypoint(L.latLng(-5.654863, -36.613376), "P1"),
+   					new L.Routing.Waypoint(L.latLng(-5.655146, -36.612521), "P2"),
+   					new L.Routing.Waypoint(L.latLng(-5.657006, -36.608033),  "CANAÃ"),
+   					new L.Routing.Waypoint(L.latLng(-5.658251, -36.605946), "CAPELA"),
+   					new L.Routing.Waypoint(L.latLng(-5.661606, -36.607923), "PADARIA"),
+   					new L.Routing.Waypoint(L.latLng(-5.664248, -36.608457), "RESIDENCIA"),
+   					new L.Routing.Waypoint(L.latLng(-5.665663, -36.604463), "INSS"),
+   					new L.Routing.Waypoint(L.latLng(-5.669386, -36.606593), "MADEREIRA ESPERANÇA"),
+   					new L.Routing.Waypoint(L.latLng(-5.670267, -36.606488),"MADEREIRA ESPERANÇA2"),
+   					new L.Routing.Waypoint(L.latLng(-5.672552, -36.602465), "BATALHÃO DA PM"),
+   					new L.Routing.Waypoint(L.latLng(-5.672012, -36.60111),  "ROTATÓRIA"),
+   					new L.Routing.Waypoint(L.latLng(-5.668108, -36.600974), "E. E. FRANCISCO VERAS"),
+   					new L.Routing.Waypoint(L.latLng(-5.666744, -36.600931), "TERMINAL RODOVIÁRIO"),
+   					new L.Routing.Waypoint(L.latLng(-5.665441, -36.600716), "ANTES DO BANCO DO BRASIL"),
+   					new L.Routing.Waypoint(L.latLng(-5.664715, -36.600437), "BANCO DO BRASIL"),
+   					new L.Routing.Waypoint(L.latLng(-5.664267, -36.60018), "RUA DO BANCO DO BRASIL"),
+   					new L.Routing.Waypoint(L.latLng(-5.663989, -36.599772), "RUA DO BANCO DO BRASIL"),
+   					new L.Routing.Waypoint(L.latLng(-5.662179, -36.601526), "PRAÇA DA IGREJA"),
+   					new L.Routing.Waypoint(L.latLng(-5.660573, -36.601982), "RUA DO CEMITÉRIO"),
+   					new L.Routing.Waypoint(L.latLng(-5.659601, -36.603425), "PRAÇA DO CEMITÉRIO"), 	
+   					new L.Routing.Waypoint(L.latLng(-5.658251, -36.605946), "CAPELA"),
+   					new L.Routing.Waypoint(L.latLng(-5.657006, -36.608033),  "CANAÃ"),
+   					new L.Routing.Waypoint(L.latLng(-5.65377, -36.61253),  "ENTRADA2"),
+   					new L.Routing.Waypoint(L.latLng(-5.653985, -36.612655),  "ESQUINA1"),
+   					new L.Routing.Waypoint(L.latLng(-5.653967, -36.613052),  "ESQUINA2"),
+   					new L.Routing.Waypoint(L.latLng(-5.654135, -36.613553), "BLOCO DE SALA 1")
+   					/*,
+   					new L.Routing.Waypoint(L.latLng(-5.655117, -36.61513),  "RESTAURANTE UNIVERSITÁRIO"),
+   					new L.Routing.Waypoint(L.latLng(-5.655635, -36.615688), "GARAGEM")
+   					*/									
+  				   ], createMarker: function(i, wp, nWaypoints) { return null;}, 
+				     draggableWaypoints: false, addWaypoints: false, routeWhileDragging: false,  show: false, lineOptions: { addWaypoints: false }, waypointsMode: 'snap'// Optional: updates route while dragging
+			}).addTo(map);
+
+
+const busIcon = L.divIcon({
+  //html: '<div class="bus-icon-wrap">🚌</div>',
+  //className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
+  html: '<div class="bus-icon-wrap"><img src="BUS2.png" alt="Logo" style="width: 200%; height: auto;"></div>',
+  className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
+  
+});
+
+function makeStopIcon(estado) {
+  return L.divIcon({
+   // html: `<div class="stop-marker ${estado}">🚏</div>`,
+    html: `<div class="stop-marker ${estado}"><img src="parada.png" alt="Logo" style="width: 100%; height: auto;"></div>`,
+    className: '', iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-16]
+  });
+}
+
+// ── ESTADO ───────────────────────────────────────────────────
+let PARADAS = [], HORARIOS = [], PERIODOS = [];
+let busMarker   = null;
+let centrar     = true;
+let stopMarkers = [], estadoMarkers = [];
+
+let viagem        = null;        // { it, prox, minDist, ultimoSinal }  (prox = índice da PRÓXIMA parada)
+const concluidas  = new Set();   // viagens já feitas hoje (dia|id)
+let ultimaLeitura = null;        // { lat, lng, ts:Date }
+let sinalOk       = false;
+let abaAtual      = null;
+let ultimoCorId   = null;
+let ultimoAtivo   = -2;
+
+let ROTA = [];                   // coordenadas da rota desenhada no mapa (Leaflet Routing Machine)
+let ROTA_INFO = null;            // { cum[], idx[], s[], n } — posição de cada parada ao longo da rota
+
+// ── UTILIDADES ───────────────────────────────────────────────
+const esc      = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chaveDia = it => new Date().toDateString() + '|' + it.id;
+const hmin     = it => it.hora.replace(':', 'h') + 'min';
+
+function minutosAgora() {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+}
+
+function distancia(lat1, lng1, lat2, lng2) {
+  const R    = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    = Math.sin(dLat/2)**2 +
+               Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── CARREGAMENTO DOS ARQUIVOS ────────────────────────────────
+async function carregarTexto(url) {
+  const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+  return r.text();
+}
+
+// paradas.txt: linhas no formato { id: 1, nome: 'NOME', lat: -5.65, lng: -36.61 },
+function parseParadas(txt) {
+  const re = /id:\s*(\d+)\s*,\s*nome:\s*(['"])(.*?)\2\s*,\s*lat:\s*(-?\d+(?:\.\d+)?)\s*,\s*lng:\s*(-?\d+(?:\.\d+)?)/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(txt))) out.push({ id: +m[1], nome: m[3], lat: +m[4], lng: +m[5] });
+  return out;
+}
+
+// horarios.txt: linhas no formato Manhã,06:20,07:20,...
+function parseHorarios(txt) {
+  const itens = [], periodos = [];
+  txt.split(/\r?\n/).forEach(linha => {
+    const partes = linha.split(',').map(s => s.trim()).filter(Boolean);
+    if (partes.length < 2) return;
+    const periodo = partes.shift();
+    periodos.push(periodo);
+    let n = 0;
+    partes.forEach(h => {
+      const m = h.match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return;
+      n++;
+      itens.push({ periodo, n, hora: m[1].padStart(2, '0') + ':' + m[2], min: +m[1] * 60 + +m[2], id: periodo + '|' + h });
+    });
+  });
+  itens.sort((a, b) => a.min - b.min);
+  return { itens, periodos: [...new Set(periodos)] };
+}
+
+function mostrarErroDados(e) {
+  console.error(e);
+  const box = document.getElementById('erro-dados');
+  box.textContent = `Não foi possível carregar ${ARQ_PARADAS} / ${ARQ_HORARIOS}. ` +
+    'Abra a página por um servidor (GitHub Pages ou "python3 -m http.server"), não direto do arquivo. ' +
+    `Detalhe: ${e.message}`;
+  box.classList.remove('hidden');
+}
+
+// ── ITINERÁRIO ATUAL ─────────────────────────────────────────
+// O "atual" é o último cuja janela (horário − JANELA_ANTES_MIN) já abriu. Antes de a janela
+// do próximo abrir, mostra-se o próximo horário assim que o atual terminou: foi concluído
+// nesta página ou já passou do fim previsto (vale para quem abre a página depois).
+const fimPrevisto = it => it.min + DURACAO_ESTIMADA_MIN + TOLERANCIA_FIM_MIN;
+let proximoEhAmanha = false;   // passou do último horário: o próximo é o primeiro de amanhã
+
+function itinerarioPorHorario() {
+  proximoEhAmanha = false;
+  if (!HORARIOS.length) return null;
+  const agora = minutosAgora();
+  let idx = 0;
+  HORARIOS.forEach((it, i) => { if (it.min - JANELA_ANTES_MIN <= agora) idx = i; });
+  const it = HORARIOS[idx];
+  const aberto = it.min - JANELA_ANTES_MIN <= agora;
+  const encerrado = aberto && (concluidas.has(chaveDia(it)) || agora > fimPrevisto(it));
+  if (encerrado) {
+    if (idx + 1 < HORARIOS.length) return HORARIOS[idx + 1];
+    proximoEhAmanha = true;
+    return HORARIOS[0];
+  }
+  return it;
+}
+const itinerarioCorrente = () => viagem ? viagem.it : itinerarioPorHorario();
+
+function statusItinerario(it) {
+  if (viagem && viagem.it.id === it.id) return ['Em andamento', 'live'];
+  if (proximoEhAmanha && it === HORARIOS[0]) return ['Amanhã', 'wait'];
+  if (minutosAgora() < it.min - JANELA_ANTES_MIN) return ['Próxima saída', 'wait'];
+  if (concluidas.has(chaveDia(it)) || minutosAgora() > fimPrevisto(it)) return ['Encerrado', ''];
+  return sinalOk ? ['Iniciando', 'live'] : ['Aguardando ônibus', 'wait'];
+}
+
+// ── DISTÂNCIA PELA ROTA ──────────────────────────────────────
+// A rota (polilinha) vem do Leaflet Routing Machine. Cada parada é associada a um
+// ponto da rota, em ordem crescente (programação dinâmica), o que resolve as paradas
+// que passam duas vezes no mesmo lugar (ida/volta). A distância até a próxima parada
+// é o comprimento da rota entre a posição do ônibus e essa parada.
+const plano = (a, b) => {
+  const kx = Math.cos(a.lat * Math.PI / 180) * 111320;
+  return Math.hypot((a.lng - b.lng) * kx, (a.lat - b.lat) * 110574);
+};
+
+function projetar(lat, lng, j0, j1) {
+  const cum = ROTA_INFO.cum;
+  const kx = Math.cos(lat * Math.PI / 180) * 111320, ky = 110574;
+  let melhor = { off: Infinity, s: 0 };
+  for (let j = j0; j < j1; j++) {
+    const a = ROTA[j], b = ROTA[j + 1];
+    const ax = (a.lng - lng) * kx, ay = (a.lat - lat) * ky;
+    const dx = (b.lng - a.lng) * kx, dy = (b.lat - a.lat) * ky;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const off = Math.hypot(ax + t * dx, ay + t * dy);
+    if (off < melhor.off) melhor = { off, s: cum[j] + t * (cum[j + 1] - cum[j]) };
+  }
+  return melhor;
+}
+
+function prepararRota() {
+  ROTA_INFO = null;
+  const n = ROTA.length, N = PARADAS.length;
+  if (n < 2 || N < 2) return;
+
+  const cum = new Float64Array(n);
+  for (let j = 1; j < n; j++) cum[j] = cum[j-1] + distancia(ROTA[j-1].lat, ROTA[j-1].lng, ROTA[j].lat, ROTA[j].lng);
+  ROTA_INFO = { cum, n, idx: [], s: [] };
+
+  // paradas em ordem ao longo da rota, minimizando a soma das distâncias parada↔rota
+  const back = Array.from({ length: N }, () => new Int32Array(n));
+  let prev = new Float64Array(n);
+  for (let j = 0; j < n; j++) prev[j] = plano(PARADAS[0], ROTA[j]);
+  for (let i = 1; i < N; i++) {
+    const cur = new Float64Array(n);
+    let melhor = Infinity, k = 0;
+    for (let j = 0; j < n; j++) {
+      if (prev[j] < melhor) { melhor = prev[j]; k = j; }
+      cur[j] = melhor + plano(PARADAS[i], ROTA[j]);
+      back[i][j] = k;
+    }
+    prev = cur;
+  }
+  let j = 0;
+  prev.forEach((v, x) => { if (v < prev[j]) j = x; });
+  const idx = new Array(N);
+  idx[N-1] = j;
+  for (let i = N - 1; i > 0; i--) { j = back[i][j]; idx[i-1] = j; }
+
+  ROTA_INFO.idx = idx;
+  ROTA_INFO.s = idx.map((ix, i) =>
+    projetar(PARADAS[i].lat, PARADAS[i].lng, Math.max(0, ix - 1), Math.min(n - 1, ix + 1)).s);
+}
+
+// distância (m) do ônibus até a próxima parada seguindo a rota; null = usar linha reta
+function distanciaPorRota(l, prox) {
+  const R = ROTA_INFO;
+  if (!R || prox < 1) return null;
+  const MARGEM = 15;   // vértices de tolerância antes/depois do trecho esperado
+  const pos = projetar(l.lat, l.lng,
+    Math.max(0, R.idx[prox-1] - MARGEM), Math.min(R.n - 1, R.idx[prox] + MARGEM));
+  if (pos.off > 150) return null;          // ônibus fora da rota
+  const d = R.s[prox] - pos.s;
+  return d > 0 ? d : null;                 // já passou da parada
+}
+
+// ── PARADAS (mapa + as duas listas) ──────────────────────────
+function renderizarParadas() {
+  const listas = [
+    { el: document.getElementById('stops-list'), badge: false,
+      aoClicar: p => map.flyTo([p.lat, p.lng], 16, { duration: 1 }) },
+    { el: document.getElementById('itin-stops-list'), badge: true,
+      aoClicar: p => { mostrarTela('map'); map.flyTo([p.lat, p.lng], 16, { duration: 1 }); } }
+  ];
+  listas.forEach(l => l.el.innerHTML = '');
+
+  PARADAS.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], { icon: makeStopIcon('') })
+      .addTo(map)
+      .bindPopup(`<b>${esc(p.nome)}</b><br>Parada ${p.id} de ${PARADAS.length}`);
+    stopMarkers.push(m);
+    estadoMarkers.push('');
+
+    listas.forEach(l => {
+      const item = document.createElement('div');
+      item.className   = 'stop-item';
+      item.dataset.idx = i;
+      item.innerHTML = `
+        <div class="stop-line"><div class="stop-dot"></div></div>
+        <div class="stop-info"><div class="stop-name">${esc(p.nome)}</div></div>
+        ${l.badge ? '<span class="badge-prox">PRÓXIMA</span>' : ''}`;
+      item.onclick = () => l.aoClicar(p);
+      l.el.appendChild(item);
+    });
+  });
+}
+
+function rolarAtivo() {
+  document.querySelectorAll('.stop-item.active')
+    .forEach(el => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+}
+
+// ── ABAS / HORÁRIOS ──────────────────────────────────────────
+function renderAbas() {
+  const box = document.getElementById('itin-tabs');
+  box.innerHTML = '';
+  PERIODOS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.dataset.p = p;
+    b.textContent = p.toUpperCase();
+    b.onclick = () => selecionarAba(p);
+    box.appendChild(b);
+  });
+}
+
+function selecionarAba(p) {
+  abaAtual = p;
+  document.querySelectorAll('#itin-tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  const box = document.getElementById('itin-times');
+  box.innerHTML = '';
+  HORARIOS.filter(h => h.periodo === p).forEach(it => {
+    const c = document.createElement('div');
+    c.className  = 'chip';
+    c.dataset.id = it.id;
+    c.innerHTML  = `<span class="chip-h">${it.hora}</span>`;
+    box.appendChild(c);
+  });
+  atualizarItinerarios(true);
+}
+
+function atualizarItinerarios(forcarScroll) {
+  const cor = itinerarioCorrente();
+
+  document.querySelectorAll('#itin-times .chip').forEach(c => {
+    c.classList.toggle('current', !!cor && c.dataset.id === cor.id);
+    c.classList.toggle('done', concluidas.has(new Date().toDateString() + '|' + c.dataset.id));
+  });
+
+  if (cor && (forcarScroll || cor.id !== ultimoCorId)) {
+    const el = document.querySelector('#itin-times .chip.current');
+    if (el) el.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+  ultimoCorId = cor ? cor.id : null;
+
+  const st = document.getElementById('itin-status');
+  if (!cor) { st.innerHTML = ''; return; }
+  const [txt, cls] = statusItinerario(cor);
+  st.innerHTML = `
+    <div class="st-icon">🚌</div>
+    <div class="st-txt">
+      <div class="st-t">SAÍDA DA UFERSA</div>
+      <div class="st-h">${esc(cor.periodo)} · ${hmin(cor)}</div>
+    </div>
+    <span class="st-badge ${cls}">${txt}</span>`;
+}
+
+// ── VIAGEM ───────────────────────────────────────────────────
+// Para quem abre a página com a viagem já em andamento: escolhe a parada mais
+// próxima; entre paradas com a mesma coordenada (ida/volta) usa o tempo decorrido.
+function estimarProgresso(it, l) {
+  const dists  = PARADAS.map(p => distancia(l.lat, l.lng, p.lat, p.lng));
+  const menor  = Math.min(...dists);
+  const N      = PARADAS.length;
+  const espera = Math.max(0, Math.min(N - 1, (minutosAgora() - it.min) / DURACAO_ESTIMADA_MIN * (N - 1)));
+  let melhor = -1;
+  dists.forEach((d, i) => {
+    if (d <= menor + 25 && (melhor < 0 || Math.abs(i - espera) < Math.abs(melhor - espera))) melhor = i;
+  });
+  return Math.min(Math.max(melhor, 1), N - 1);
+}
+
+function tentarIniciarViagem(l) {
+  const it = itinerarioPorHorario();
+  if (!it || concluidas.has(chaveDia(it))) return;
+  if (!MODO_TESTE && (minutosAgora() < it.min - JANELA_ANTES_MIN || minutosAgora() > fimPrevisto(it))) return;
+
+  const d0 = distancia(l.lat, l.lng, PARADAS[0].lat, PARADAS[0].lng);
+  const naPartida = d0 <= RAIO_INICIO_M;
+  // Saída normal: a viagem começa na parada 1 e só avança para a 2 quando o ônibus se mover.
+  // Quem abre a página com o ônibus já em rota é ressincronizado pela posição.
+  viagem = {
+    it,
+    prox: naPartida ? 0 : estimarProgresso(it, l),
+    partiu: !naPartida,
+    origem: { lat: l.lat, lng: l.lng },
+    minDist: Infinity,
+    ultimoSinal: Date.now()
+  };
+}
+
+function concluirViagem() {
+  concluidas.add(chaveDia(viagem.it));
+  viagem = null;
+}
+
+function avancarViagem(l) {
+  const v = viagem, N = PARADAS.length;
+  const dist = i => distancia(l.lat, l.lng, PARADAS[i].lat, PARADAS[i].lng);
+
+  // ainda na parada 1: só muda para a próxima quando detectar movimento
+  if (!v.partiu) {
+    if (distancia(v.origem.lat, v.origem.lng, l.lat, l.lng) > MOVIMENTO_METROS) {
+      v.partiu = true; v.prox = 1; v.minDist = Infinity;
+    }
+    return;
+  }
+
+  // última parada: chegou = fim da viagem
+  if (v.prox === N - 1) { if (dist(N - 1) < CHEGADA_METROS) concluirViagem(); return; }
+
+  // pulou paradas (falha de GPS): chegou a uma das 2 seguintes
+  let chegou = -1;
+  for (let k = v.prox + 1; k <= Math.min(N - 1, v.prox + 2); k++) {
+    if (dist(k) < CHEGADA_METROS) chegou = k;
+  }
+  // passou pela próxima: chegou perto e depois começou a se afastar
+  if (chegou < 0) {
+    const d = dist(v.prox);
+    if (d < v.minDist) v.minDist = d;
+    else if (v.minDist < PASSAGEM_METROS && d > v.minDist + 15) chegou = v.prox;
+  }
+
+  if (chegou >= 0) {
+    if (chegou >= N - 1) { concluirViagem(); return; }
+    v.prox = chegou + 1;
+    v.minDist = Infinity;
+  }
+}
+
+// ── LOCALIZAÇÃO DO ÔNIBUS ────────────────────────────────────
+function parseTs(s) {
+  if (!s) return new Date();
+  const d = new Date(String(s).replace(' ', 'T') + (API_TS_UTC ? 'Z' : ''));
+  return isNaN(d) ? new Date() : d;
+}
+
+async function buscarLocalizacao() {
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now(), { mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const dados = await res.json();
+    const d = Array.isArray(dados) ? dados[0] : dados;   // a API retorna um array
+    setOnline(true);
+    ultimaLeitura = (d && d.latitude != null)
+      ? { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude), ts: parseTs(d.timestamp) }
+      : null;
+  } catch (e) { setOnline(false); console.error(e); }
+  atualizarEstado();
+}
+
+function atualizarEstado() {
+  const l = ultimaLeitura;
+  sinalOk = !!l && (MODO_TESTE || Date.now() - l.ts.getTime() <= SINAL_MAX_SEG * 1000);
+  mostrarSemSinal(!sinalOk);
+
+  if (sinalOk) {
+    if (!busMarker) busMarker = L.marker([l.lat, l.lng], { icon: busIcon }).addTo(map).bindPopup('<b>CIRCULAR</b>');
+    else busMarker.setLatLng([l.lat, l.lng]);
+    if (centrar && mapaVisivel()) map.panTo([l.lat, l.lng], { animate: true, duration: 0.8 });
+
+    if (viagem) { viagem.ultimoSinal = Date.now(); avancarViagem(l); }
+    else        tentarIniciarViagem(l);
+  } else {
+    if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+    if (viagem && Date.now() - viagem.ultimoSinal > SEM_SINAL_CANCELA_MIN * 60000) viagem = null;
+  }
+  atualizarPainel();
+}
+
+// ── PAINÉIS ──────────────────────────────────────────────────
+function atualizarPainel() {
+  const l = ultimaLeitura, N = PARADAS.length;
+
+  // monitor "próxima parada"
+  let nome, dist = '—', chegando = false, prog = 0, porRota = false;
+  if (!sinalOk) {
+    nome = 'Aguardando ônibus...';
+  } else if (!viagem) {
+    const it = itinerarioPorHorario();
+    nome = !it ? 'Aguardando viagem' : proximoEhAmanha ? `Próxima saída amanhã às ${it.hora}` : `Aguardando saída das ${it.hora}`;
+  } else {
+    const p = PARADAS[viagem.prox], ant = PARADAS[viagem.prox - 1];   // ant é undefined na parada 1
+    const reta = distancia(l.lat, l.lng, p.lat, p.lng);
+    const rota = distanciaPorRota(l, viagem.prox);
+    const d    = rota !== null ? Math.max(rota, reta) : reta;   // pela rota nunca é menor que a linha reta
+    nome = p.nome; dist = Math.round(d); chegando = reta < CHEGADA_METROS; porRota = rota !== null;
+    const dEntre = !ant ? 0 : ROTA_INFO ? ROTA_INFO.s[viagem.prox] - ROTA_INFO.s[viagem.prox - 1]
+                                        : distancia(ant.lat, ant.lng, p.lat, p.lng);
+    if (dEntre > 0) prog = Math.max(0, Math.min(100, (1 - d / dEntre) * 100));
+  }
+  const nomeEl = document.getElementById('next-stop-name');
+  nomeEl.textContent = nome;
+  nomeEl.className   = 'monitor-stop-name' + (chegando ? ' arriving' : '');
+  document.getElementById('next-stop-dist').textContent = dist;
+  document.getElementById('next-stop-unit').textContent = viagem && !porRota ? 'metros (em linha reta)' : 'metros';
+  document.getElementById('next-monitor').style.setProperty('--progress', prog + '%');
+
+  // barra inferior
+  document.getElementById('last-update').textContent = l
+    ? l.ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  document.getElementById('accuracy').textContent = '—';
+  const cor = itinerarioCorrente();
+  document.getElementById('itin-info').textContent = cor ? cor.hora : '—';
+  document.getElementById('stop-counter').textContent = viagem ? `${viagem.prox + 1}/${N}` : '—/—';
+
+  // listas de paradas
+  document.querySelectorAll('.stop-item').forEach(el => {
+    const i = +el.dataset.idx;
+    el.classList.toggle('passed', !!viagem && i < viagem.prox);
+    el.classList.toggle('active', !!viagem && i === viagem.prox);
+  });
+  // marcadores
+  PARADAS.forEach((p, i) => {
+    const est = viagem ? (i < viagem.prox ? 'passed' : i === viagem.prox ? 'next' : '') : '';
+    if (estadoMarkers[i] !== est) { estadoMarkers[i] = est; stopMarkers[i].setIcon(makeStopIcon(est)); }
+  });
+  const ativo = viagem ? viagem.prox : -1;
+  if (ativo !== ultimoAtivo) { ultimoAtivo = ativo; rolarAtivo(); }
+
+  atualizarItinerarios(false);
+}
+
+function setOnline(online) {
+  const pill = document.getElementById('live-pill');
+  pill.className = 'live-pill' + (online ? '' : ' offline');
+  pill.innerHTML = `<div class="live-dot"></div> ${online ? 'AO VIVO' : 'SEM CONEXÃO'}`;
+}
+
+function mostrarSemSinal(show) {
+  document.getElementById('no-signal').style.display = show ? 'block' : 'none';
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────
+const mapaVisivel = () => !document.getElementById('view-map').classList.contains('hidden');
+
+function mostrarTela(nome) {
+  ['home', 'itin', 'map'].forEach(n =>
+    document.getElementById('view-' + n).classList.toggle('hidden', n !== nome));
+  if (nome === 'map') {
+    map.invalidateSize();
+    if (busMarker && centrar) map.panTo(busMarker.getLatLng(), { animate: false });
+    rolarAtivo();
+  }
+  if (nome === 'itin') { atualizarItinerarios(true); rolarAtivo(); }
+}
+
+function centralizar() {
+  centrar = true;
+  if (busMarker) map.panTo(busMarker.getLatLng(), { animate: true });
+}
+
+map.on('dragstart', () => { centrar = false; });
+
+// geometria da rota desenhada no mapa (chega pela internet; pode vir antes ou depois dos .txt)
+controleRota.on('routesfound', e => {
+  ROTA = e.routes[0].coordinates || [];
+  if (PARADAS.length) prepararRota();
+});
+
+// ── INÍCIO ───────────────────────────────────────────────────
+(async function iniciar() {
+  try {
+    const [txtP, txtH] = await Promise.all([carregarTexto(ARQ_PARADAS), carregarTexto(ARQ_HORARIOS)]);
+    PARADAS = parseParadas(txtP);
+    const h = parseHorarios(txtH);
+    HORARIOS = h.itens; PERIODOS = h.periodos;
+    if (!PARADAS.length)  throw new Error(`${ARQ_PARADAS} sem paradas válidas`);
+    if (!HORARIOS.length) throw new Error(`${ARQ_HORARIOS} sem horários válidos`);
+  } catch (e) { mostrarErroDados(e); return; }
+
+  renderizarParadas();
+  prepararRota();
+  renderAbas();
+  const cor = itinerarioPorHorario();
+  selecionarAba(cor ? cor.periodo : PERIODOS[0]);
+
+  buscarLocalizacao();
+  setInterval(buscarLocalizacao, POLL_INTERVAL);
+})();
+</script>
+</body>
+</html>
