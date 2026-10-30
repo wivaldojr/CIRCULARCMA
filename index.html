@@ -569,7 +569,9 @@
 
 <script>
 // ── CONFIG ───────────────────────────────────────────────────
-const API_URL = 'https://corsproxy.io/?url=https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+const API_URL_BASE = 'https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+const API_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(API_URL_BASE);
+//const API_URL = 'https://corsproxy.io/?url=https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
 //const API_URL = 'https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
 const ARQ_PARADAS  = 'paradas.txt';
 const ARQ_HORARIOS = 'horarios.txt';
