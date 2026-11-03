@@ -1251,7 +1251,7 @@ function atualizarAviso() {
   const mapa = document.getElementById('no-signal'), itin = document.getElementById('itin-sem-sinal');
   let htmlMapa, htmlItin;
   if (!sinalOk) {
-    htmlMapa = '<h2>SEM SINAL</h2><p>O ônibus ainda não iniciou o rastreamento.</p>';
+    htmlMapa = '<h2>SEM SINAL DO ÔNIBUS</h2>';//<p>O ônibus ainda não iniciou o rastreamento.</p>';
     htmlItin = '<b>SEM SINAL</b>O ônibus ainda não iniciou o rastreamento.';
   } else {
     const it = viagem ? viagem.it : itinerarioPorHorario();
