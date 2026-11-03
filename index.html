@@ -1204,7 +1204,7 @@ function atualizarPainel() {
   nomeEl.textContent = nome;
   nomeEl.className   = 'monitor-stop-name' + (chegando ? ' arriving' : '');
   document.getElementById('next-stop-dist').textContent = dist;
-  document.getElementById('next-stop-unit').textContent = viagem && !porRota ? 'metros (em linha reta)' : 'metros';
+  document.getElementById('next-stop-unit').textContent = viagem && !porRota ? 'metros' : 'metros';
   document.getElementById('next-monitor').style.setProperty('--progress', prog + '%');
 
   // barra inferior
