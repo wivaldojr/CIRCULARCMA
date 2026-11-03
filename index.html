@@ -1183,7 +1183,7 @@ function atualizarPainel() {
   // monitor "próxima parada"
   let nome, dist = '—', chegando = false, prog = 0, porRota = false;
   if (!sinalOk) {
-    nome = 'AGUARDANDO ÔNIBUS';
+    nome = 'AGUARDANDO ÔNIBUSa';
   } else if (!viagem) {
     const it = itinerarioPorHorario();
     nome = !it ? 'Aguardando viagem' : proximoEhAmanha ? `Próxima saída amanhã às ${it.hora}` : `Aguardando saída das ${it.hora}`;
