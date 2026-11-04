@@ -288,17 +288,18 @@
     transition: all 0.3s;
   }
   .stop-marker.next   { 
+	width: 65px; height: 48px;  
 	border: 3px solid var(--yellow); 
   /*border-color: var(--yellow); 
-	background: rgba(255,209,0,0.15); 
-	box-shadow: 0 0 0 4px rgba(255,209,0,0.2);*/ 
+	background: rgba(255,209,0,0.15); */
+	box-shadow: 0 0 0 4px rgba(255,209,0,0.2);
     animation: stop-marker-pulse 2s infinite;
   }
   @keyframes stop-marker-pulse {
     0%,100%{ box-shadow: 0 0 0 0 rgba(255,209,0,0.3); }
     50%    { box-shadow: 0 0 0 8px rgba(255,209,0,0); }
   }	
-  .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }
+  .stop-marker.passed { width: 55px; height: 38px; border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }
   .stop-marker.skipped { opacity: 0.25; filter: grayscale(1); }   /* parada que este horário não atende */
 
   .leaflet-popup-content-wrapper {
@@ -511,7 +512,7 @@
   <div class="home-wrap">
     <div class="home-campus">🎓 UFERSA • CAMPUS ANGICOS</div>
     <div class="home-logo"><img src="BUS.png" alt="" onerror="this.parentNode.textContent='🚌'"></div>
-    <h1 class="home-title">1Rota - UFERSA</h1>
+    <h1 class="home-title">Rota - UFERSA</h1>
     <p class="home-desc">Sistema inteligente de monitoramento do transporte universitário para o campus <b>Angicos</b>.</p>
 
     <button class="btn-home primary" onclick="mostrarTela('map')">
