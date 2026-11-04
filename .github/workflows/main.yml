@@ -3,7 +3,7 @@ name: Injetar Commit Hash
 on:
   push:
     branches:
-      - main # Altere para master se a sua branch principal tiver esse nome
+      - main
 
 jobs:
   build:
@@ -16,10 +16,9 @@ jobs:
 
       - name: Substituir marcador pelo hash curto
         run: |
-          # Extrai os 7 primeiros caracteres do commit atual
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          # Substitui no index.html
-          sed -i "s/{{COMMIT_HASH}}/$SHORT_SHA/g" index.html
+          # Substitui o conteúdo que está estritamente entre os comentários de início e fim
+          sed -i "s/\(<!-- HASH_START -->\).*\(<!-- HASH_END -->\)/\1$SHORT_SHA\2/g" index.html
 
       - name: Salvar alteração no repositório
         run: |
