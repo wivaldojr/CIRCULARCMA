@@ -1417,7 +1417,7 @@ mostrarCoordenadaAoClicar();   // ← comente esta linha para desativar o popup 
   const repositorio = "CIRCULARCMA";
   const branch = "main"; // ou 'master'
 
-  const url = `https://github.com{usuario}/${repositorio}/commits/${branch}`;
+  const url = `https://github.com/${usuario}/${repositorio}/commits/${branch}`;
 
   fetch(url)
     .then(response => response.json())
