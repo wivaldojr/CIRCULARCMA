@@ -691,8 +691,21 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
    					new L.Routing.Waypoint(L.latLng(-5.655635, -36.615688), "GARAGEM")
    					*/									
   				   ], createMarker: function(i, wp, nWaypoints) { return null;}, 
-				     draggableWaypoints: false, addWaypoints: false, routeWhileDragging: false,  show: false, lineOptions: { addWaypoints: false }, waypointsMode: 'snap'// Optional: updates route while dragging
+				     draggableWaypoints: false, addWaypoints: false, routeWhileDragging: false,  show: false, waypointsMode: 'snap',
+	 									lineOptions: { 
+														addWaypoints: false,
+											   			styles: [ {color: 'black', opacity: 0.25, weight: 10}, //sombra
+                                                       			  {color: 'white', opacity: 0.8, weight: 7}, // Contorno
+                                                       			  {color: '#006633', opacity: 1, weight: 6} ] // Centro											 
+													 } // Optional: updates route while dragging
 			}).addTo(map);
+
+
+	lineOptions: { addWaypoints: false, 
+				                                     styles: [ {color: 'black', opacity: 0.25, weight: 10}, //sombra
+                                                       {color: 'white', opacity: 0.8, weight: 7}, // Contorno
+                                                       {color: '#006633', opacity: 1, weight: 6} ] // Centro
+				                             }
 
 
 const busIcon = L.divIcon({
