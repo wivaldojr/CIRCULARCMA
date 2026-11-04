@@ -1042,7 +1042,7 @@ function atualizarItinerarios(forcarScroll) {
   if (!exib) { st.innerHTML = ''; return; }
   const [txt, cls] = statusItinerario(exib);
   st.innerHTML = `
-    <div class="st-icon">🚌</div>
+    <div class="bus-icon-wrap"><img src="BUS2.png" alt="Logo" style="width: 10%; height: auto;"></div>
 	<div class="st-txt">
       <div class="st-t">SAÍDA DA UFERSA</div>
       <div class="st-h">${esc(exib.periodo)} · ${hmin(exib)}</div>
@@ -1050,6 +1050,7 @@ function atualizarItinerarios(forcarScroll) {
     <span class="st-badge ${cls}">${txt}</span>`;
 	
 }
+	//<div class="st-icon">🚌</div>
 
 // ── VIAGEM ───────────────────────────────────────────────────
 // Para quem abre a página com a viagem já em andamento: escolhe a parada mais
