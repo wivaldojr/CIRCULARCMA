@@ -570,7 +570,7 @@
     <div id="map"></div>
 
     <div class="no-signal" id="no-signal">
-      <h2>SEM SINAL2</h2>
+      <h2>SEM SINAL</h2>
       <p>O ônibus ainda não iniciou o rastreamento.</p>
     </div>
   </div>
@@ -689,7 +689,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const busIcon = L.divIcon({
   //html: '<div class="bus-icon-wrap">🚌</div>',
   //className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
-  html: '<div class="bus-icon-wrap"><img src="BUS2.png" alt="Logo" style="width: 180%; height: auto;"></div>',
+  html: '<div class="bus-icon-wrap"><img src="BUS2.png" alt="Logo" style="width: 100%; height: auto;"></div>',
   className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
   
 });
@@ -1184,7 +1184,7 @@ function atualizarPainel() {
   // monitor "próxima parada"
   let nome, dist = '—', chegando = false, prog = 0, porRota = false;
   if (!sinalOk) {
-    nome = 'AGUARDANDO ÔNIBUSa';
+    nome = 'AGUARDANDO ÔNIBUS';
   } else if (!viagem) {
     const it = itinerarioPorHorario();
     nome = !it ? 'Aguardando viagem' : proximoEhAmanha ? `Próxima saída amanhã às ${it.hora}` : `Aguardando saída das ${it.hora}`;
