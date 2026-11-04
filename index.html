@@ -692,21 +692,12 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
    					*/									
   				   ], createMarker: function(i, wp, nWaypoints) { return null;}, 
 				     draggableWaypoints: false, addWaypoints: false, routeWhileDragging: false,  show: false, waypointsMode: 'snap',
-	 									lineOptions: { 
-														addWaypoints: false,
+	 									lineOptions: {	addWaypoints: false,
 											   			styles: [ {color: 'black', opacity: 0.25, weight: 10}, //sombra
                                                        			  {color: 'white', opacity: 0.8, weight: 7}, // Contorno
                                                        			  {color: '#006633', opacity: 1, weight: 6} ] // Centro											 
 													 } // Optional: updates route while dragging
 			}).addTo(map);
-
-
-	lineOptions: { addWaypoints: false, 
-				                                     styles: [ {color: 'black', opacity: 0.25, weight: 10}, //sombra
-                                                       {color: 'white', opacity: 0.8, weight: 7}, // Contorno
-                                                       {color: '#006633', opacity: 1, weight: 6} ] // Centro
-				                             }
-
 
 const busIcon = L.divIcon({
   //html: '<div class="bus-icon-wrap">🚌</div>',
