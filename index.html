@@ -530,6 +530,7 @@
     </button>
 
     <div id="erro-dados" class="erro-dados hidden"></div>
+	<p>Commit: <span id="commit-hash">Carregando...</span></p>  
   </div>
 </section>
 
@@ -1409,6 +1410,30 @@ mostrarCoordenadaAoClicar();   // ← comente esta linha para desativar o popup 
   buscarLocalizacao();
   setInterval(buscarLocalizacao, POLL_INTERVAL);
 })();
+
+
+ // Altere com os seus dados do GitHub:
+  const usuario = "wivaldojr";
+  const repositorio = "CIRCULARCMA";
+  const branch = "main"; // ou 'master'
+
+  const url = `https://github.com{usuario}/${repositorio}/commits/${branch}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      // Pega os 7 primeiros caracteres do hash (SHA)
+      const shortHash = data.sha.substring(0, 7);
+      
+      // Atualiza o texto na página
+      document.getElementById('commit-hash').innerText = shortHash;
+    })
+    .catch(error => {
+      console.error('Erro ao buscar o commit:', error);
+      document.getElementById('commit-hash').innerText = "Indisponível";
+    });
+
+	
 </script>
 </body>
 </html>
