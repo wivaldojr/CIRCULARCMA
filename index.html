@@ -264,7 +264,7 @@
     font-size: 18px;
     box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.6);
     animation: pulse-bus 2s infinite;
-	z-index: 1000;
+	z-index: 1;
   }
   @keyframes pulse-bus {
     0%,100%{ box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.5); }
@@ -278,6 +278,11 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
   }
+
+	@keyframes stop-markernext-piscar {
+   	0%, 100% { background-color: rgba(255,209,0, 1); }
+    50% { background-color: rgba(255,209,0, 0); }
+  } 
  
 
   .stop-marker {
@@ -291,7 +296,7 @@
 	transition: all 0.3s;
     animation: none;
   }
-  .stop-marker.next { border: 3px solid var(--yellow); background: rgba(255,255,255,0.0); animation: blink 1.2s infinite; }
+  .stop-marker.next { border: 3px solid var(--yellow); animation: stop-markernext-piscar 1s infinite; }
   .stop-marker.passed { border: 3px solid rgba(255,255,255,0.0); background: rgba(255,255,255,0.0); opacity: 0.6; }	
  /* .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }*/
   .stop-marker.skipped { opacity: 0.25; filter: grayscale(2); }   /* parada que este horário não atende */
