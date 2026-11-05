@@ -294,23 +294,17 @@
   }*/
   .stop-marker.next   { 
 	border: 3px solid var(--yellow); 
-	border-radius: 9px;
-	padding: 2px 2px;
-    background: rgba(255,255,255,0.0);
-	display: flex; align-items: center; justify-content: center;
-  /*border-color: var(--yellow); 
-	background: rgba(255,209,0,0.15); 
-	box-shadow: 0 0 0 4px rgba(255,209,0,0.2);*/
-	box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+	background: rgba(255,255,255,0.0);
+	/*box-shadow: 0 2px 8px rgba(0,0,0,0.5);*/
     animation: stop-markernext-pulse 2s infinite;
 	/*animation: blink 1.2s infinite;*/
   }
+  .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }
+  .stop-marker.skipped { opacity: 0.25; filter: grayscale(1); }   /* parada que este horário não atende */
   @keyframes stop-markernext-pulse {
     0%,100%{ box-shadow: 0 0 0 0 rgba(255,209,0,0.3); }
     50%    { box-shadow: 0 0 0 8px rgba(255,209,0,0); }
   }	
-  .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }
-  .stop-marker.skipped { opacity: 0.25; filter: grayscale(1); }   /* parada que este horário não atende */
 
   .leaflet-popup-content-wrapper {
     background: var(--panel) !important;
