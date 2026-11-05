@@ -281,9 +281,9 @@
  
 
   .stop-marker {
-    width: 55px; height: 38px;
-	border-radius: 9px;
-	padding: 2px 2px;
+    width: 55px; height: 55px;
+	border-radius: 50%;
+	/*padding: 2px 2px;*/
     background: rgba(255,255,255,0.0); /*var(--panel);*/
     border: 3px solid rgba(255,255,255,0.0); /*var(--panel); /*rgba(255,255,255,0.0);*/
     display: flex; align-items: center; justify-content: center;
@@ -291,8 +291,9 @@
 	transition: all 0.3s;
     animation: none;
   }
-  .stop-marker.next { width: 55px; height: 38px; border: 3px solid var(--yellow); background: rgba(255,255,255,0.0); animation: blink 1.2s infinite; }
-  .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }
+  .stop-marker.next { width: 65px; height: 65px; border: 3px solid var(--yellow); background: rgba(255,255,255,0.0); animation: blink 1.2s infinite; }
+  .stop-marker.passed { width: 55px; height: 55px; border: 3px solid rgba(255,255,255,0.0); background: rgba(255,255,255,0.0); opacity: 0.6; }	
+ /* .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }*/
   .stop-marker.skipped { opacity: 0.25; filter: grayscale(1); }   /* parada que este horário não atende */
   
   .leaflet-popup-content-wrapper {
