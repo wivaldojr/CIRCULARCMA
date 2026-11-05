@@ -1345,7 +1345,7 @@ controleRota.on('routesfound', e => {
 // Tudo está dentro desta função: para esconder, comente só a linha da chamada logo abaixo.
 function mostrarCoordenadasCentro() {
   const el = document.createElement('div');
-  el.style.cssText = 'position:absolute;left:6px;bottom:6px;z-index:1000;pointer-events:none;' +
+  el.style.cssText = 'position:absolute;left:50%;bottom:6px;transform: translate(-50%,0);z-index:1000;pointer-events:none;' +
     'background:rgba(10,10,10,0.85);color:#e8e8e8;border:1px solid #444;border-radius:4px;' +
     'padding:4px 8px;font:11px "IBM Plex Mono",monospace;';
   map.getContainer().appendChild(el);
@@ -1355,6 +1355,7 @@ function mostrarCoordenadasCentro() {
   };
   map.on('move zoom', atualizar);
   atualizar();
+	
 }
 mostrarCoordenadasCentro();   // ← comente esta linha para esconder as coordenadas
 
