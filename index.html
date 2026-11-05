@@ -1347,7 +1347,7 @@ function mostrarCoordenadasCentro() {
   const el = document.createElement('div');
   el.style.cssText = 'position:absolute;left:50%;bottom:6px;transform: translate(-50%,0);z-index:1000;pointer-events:none;' +
                  'width: fit-content;background:rgba(10,10,10,0.85);color:#e8e8e8;border:1px solid #444;border-radius:4px;' +
-                 'padding:4px 8px;font:11px "IBM Plex Mono",monospace;';
+                 'padding:4px 8px;font:11px "IBM Plex Mono",monospace;white-space: nowrap;';
   map.getContainer().appendChild(el);
   const atualizar = () => {
     const c = map.getCenter();
