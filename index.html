@@ -232,9 +232,9 @@
 
   .info-item { display: flex; flex-direction: column; gap: 2px; }
   .info-label { font-size: 8px; letter-spacing: 1.5px; color: #cdcdcd; text-transform: uppercase; }
-  .info-value { font-size: 13px; color: var(--white); font-weight: 600; }
-  .info-value.yellow { color: var(--yellow); }
-  .info-value.green  { color: var(--green); }
+  .info-value { font-size: 13px; color: var(--white); font-weight: 600; align-items: center; }
+  .info-value.yellow { color: var(--yellow); align-items: center; }
+  .info-value.green  { color: var(--green); align-items: center; }
 
   .btn-center {
     background: var(--yellow);
@@ -615,15 +615,15 @@
   </div>
   <div class="info-item">
     <span class="info-label">Precisão GPS</span>
-    <span class="info-value green" id="accuracy">—</span>
+    <span class=" green" id="accuracy">—</span>
   </div>
   <div class="info-item">
     <span class="info-label">Parada</span>
-    <span class="info-value yellow" id="stop-counter">—/—</span>
+    <span class=" yellow" id="stop-counter">—/—</span>
   </div>
   <div class="info-item">
     <span class="info-label">Itinerário</span>
-    <span class="info-value yellow" id="itin-info">—</span>
+    <span class=" yellow" id="itin-info">—</span>
   </div>
   <button class="btn-center" onclick="centralizar()">⊙ CENTRALIZAR</button>
 </div>
