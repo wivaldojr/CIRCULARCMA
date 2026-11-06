@@ -1413,7 +1413,7 @@ function atualizarAviso() {
     const it = viagem ? viagem.it : itinerarioPorHorario();
     const emRota = viagem && (viagem.fase === 'movimento' || viagem.fase === 'chegada');
     const txt = !it ? 'CIRCULAR ONLINE'
-      : emRota ? `CIRCULAR DESLOCAMENTO ROTA DAS ${it.hora}`       // ônibus em movimento
+      : emRota ? `CIRCULAR EM DESLOCAMENTO ROTA DAS ${it.hora}`       // ônibus em movimento
       : `CIRCULAR ONLINE: SAÍDAS ÀS ${it.hora}`;                   // enviando localização, ainda não saiu
     htmlMapa = `<h2>${esc(txt)}</h2>`;
     htmlItin = esc(txt);
