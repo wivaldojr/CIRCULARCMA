@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIRCULAR UFERSA — Acompanhe ao vivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #002D4D; /*#0a0a0a;*/
+    --yellow: #FFD100;
+    --yellow-escuro: #E0B000;   /* tom um pouco mais escuro do destaque (preenchimento da próxima parada) */
+    --turquesa: #00C9A7;   /* usada só no aviso de ônibus online */
+    --white: #f5f5f0;
+    --gray: #151515;
+    --panel: #002D4D; /*#1a1a1a;*/
+    --panel2: #222;
+    --green: #30d158;
+    --red: #ff3b30;
+    --blue: #0a84ff;
+    --orange: #ff9f0a;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'IBM Plex Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--gray);
+    border-bottom: 2px solid var(--yellow);
+    padding: 0 5px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+
+  .header-left {display: flex; align-items: center; gap: 7px; }
+
+  .line-badge {
+    background: var(--yellow);
+    color: var(--black);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    padding: 2px 22px;
+    border-radius: 3px;
+  }
+
+  .line-name {
+	font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--white); /*#666;*/
+    letter-spacing: 2.0px;
+    line-height: 3.8;
+    text-transform: uppercase;
+	white-space: nowrap;
+  }
+
+  .live-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(48,209,88,0.1);
+    border: 1px solid rgba(48,209,88,0.3);
+    border-radius: 20px;
+    padding: 2px 6px;
+    font-size: 9px;
+    color: var(--green);
+    letter-spacing: 1px;
+    transition: all 0.3s;
+	white-space: nowrap;
+  }
+  .live-pill.offline { background: rgba(255,59,48,0.1); border-color: rgba(255,59,48,0.3); color: var(--red); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink 1.2s infinite; }
+  .offline .live-dot { background: var(--red); animation: none; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ── PRÓXIMA PARADA MONITOR ── */
+  .next-stop-monitor {
+    background: var(--panel);
+    border-bottom: 1px solid #2a2a2a;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 20px;
+    min-height: 44px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .next-stop-monitor::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--yellow);
+    width: var(--progress, 0%);
+    transition: width 1s linear;
+  }
+
+  .monitor-left { display: flex; align-items: center; gap: 15px; min-width: 0; }
+
+  .stop-icon-wrap {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0);
+    /*background: rgba(255,209,0,0.12);*/
+    border: 3px solid rgba(255,255,255,0); /*var(--yellow);*/
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 10;
+    /*animation: stop-pulse 2s infinite;*/
+  }
+  @keyframes stop-pulse {
+    0%,100%{ box-shadow: 0 0 0 0 rgba(255,209,0,0.3); }
+    50%    { box-shadow: 0 0 0 8px rgba(255,209,0,0); }
+  }
+
+  .monitor-text { min-width: 0; }
+  .monitor-label { font-size: 18px; letter-spacing: 1px; color: var(--white); text-transform: uppercase; margin-bottom: 4px; }
+  .monitor-stop-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--yellow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 1.5px;
+    transition: color 0.4s;
+  }
+  .monitor-stop-name.arriving { color: var(--green); animation: arrive-flash 0.6s ease 3; }
+  @keyframes arrive-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .monitor-right { text-align: right; flex-shrink: 0; }
+  .monitor-dist { font-family: 'Bebas Neue', sans-serif; font-size: 25px; color: var(--white); line-height: 1; }
+  .monitor-dist-unit { font-size: 10px; color: #cdcdcd; letter-spacing: 1px; }
+
+  /* ── LAYOUT PRINCIPAL ── */
+  .main-area { flex: 1; display: flex; overflow: hidden; position: relative; }
+  #map { flex: 1; width: 100%; }
+  .leaflet-tile { filter: brightness(0.9) saturate(0.85); }
+
+  /* ── PAINEL LATERAL DE PARADAS ── */
+  .stops-panel {
+    width: 200px;
+    background: var(--gray);
+    border-left: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .stops-panel-title {
+    padding: 10px 12px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+  }
+
+  .stops-list {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+
+  .stop-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1e1e1e;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .stop-item:hover { background: rgba(255,255,255,0.03); }
+  .stop-item.active { background: rgba(255,209,0,0.06); }
+  .stop-item.passed { opacity: 0.35; }
+
+  .stop-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 3px; }
+  .stop-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid #444;
+    background: #0a0a0a;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .stop-item.passed .stop-dot  { background: var(--green);  border-color: var(--green); }
+  .stop-item.active .stop-dot  { background: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 0 4px rgba(255,209,0,0.2); }
+  .stop-connector { width: 2px; flex: 1; min-height: 18px; background: #2a2a2a; margin: 2px 0; transition: background 0.3s; }
+  .stop-item.passed .stop-connector { background: var(--green); }
+
+  .stop-info { flex: 1; min-width: 0; }
+  .stop-num  { font-size: 9px; color: #444; letter-spacing: 1px; margin-bottom: 1px; }
+  .stop-name { font-size: 11px; color: #888; line-height: 1.3; transition: color 0.3s; }
+  .stop-item.active .stop-name { color: var(--yellow); font-weight: 600; }
+  .stop-item.passed .stop-name { color: #555; }
+  .stop-dist-label { font-size: 9px; color: #444; margin-top: 2px; letter-spacing: 0.5px; }
+  .stop-item.active .stop-dist-label { color: var(--orange); }
+
+  /* ── BOTTOM BAR ── */
+  .bottom {
+    background: var(--panel);
+    border-top: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+
+  .info-item { display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center;}
+  .info-label { font-size: 8px; letter-spacing: 1.5px; color: #cdcdcd; text-transform: uppercase; }
+  .info-value { font-size: 12px; color: var(--white); font-weight: 600; }
+  .info-value.yellow { color: var(--yellow); }
+  .info-value.green { color: var(--green); }
+	 
+  .btn-center {
+    background: var(--yellow);
+    color: var(--black);
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 7px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn-center:hover { opacity: 0.85; }
+
+  /* ── MARCADORES ── */
+  .bus-icon-wrap {
+    background: var(--yellow);
+    border: 2px solid var(--black);
+    border-radius: 50%;
+    width: 55px; height: 55px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.6);
+    animation: pulse-bus 2s infinite;
+	z-index: 1;
+  }
+  @keyframes pulse-bus {
+    0%,100%{ box-shadow: 0 0 0 4px rgba(255,209,0,0.3), 0 4px 12px rgba(0,0,0,0.5); }
+    50%    { box-shadow: 0 0 0 10px rgba(255,209,0,0.05), 0 4px 12px rgba(0,0,0,0.5); }
+  } 
+
+  .bus-icon-wrap2 {
+    background: rgba(255,255,255,0,0);
+    border-radius: 50%;
+    width: 55px; height: 55px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+	@keyframes stop-markernext-piscar {
+   	0%, 100% { background-color: rgba(255,209,0, 1); border: 3px solid rgba(255,209,0, 1) }
+    50% { background-color: rgba(255,209,0, 0); border: 3px solid rgba(255,209,0, 0)}
+  } 
+ 
+
+  .stop-marker {
+    width: 55px; height: 55px;
+	border-radius: 50%;
+	/*padding: 2px 2px;*/
+    background: rgba(255,255,255,0.0); /*var(--panel);*/
+    border: 3px solid rgba(255,255,255,0.0); /*var(--panel); /*rgba(255,255,255,0.0);*/
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+	transition: all 0.3s;
+    animation: none;
+  }
+  .stop-marker.next { animation: stop-markernext-piscar 1.0s infinite; }
+  .stop-marker.passed { border: 3px solid rgba(255,255,255,0.0); background: rgba(255,255,255,0.0); opacity: 0.6; }	
+ /* .stop-marker.passed { border: 3px solid var(--green); background: rgba(48,209,88,0.1); opacity: 0.6; }*/
+  .stop-marker.skipped { opacity: 0.25; filter: grayscale(2); }   /* parada que este horário não atende */
+  
+  .leaflet-popup-content-wrapper {
+    background: var(--panel) !important;
+    border: 1px solid var(--yellow) !important;
+    border-radius: 4px !important;
+    color: var(--white) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 12px !important;
+    box-shadow: 4px 4px 0 rgba(255,209,0,0.15) !important;
+  }
+  .leaflet-popup-tip { background: var(--panel) !important; }
+  .leaflet-popup-close-button { color: #666 !important; }
+
+  .map-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
+  /* esconde o controle da lista de rota (Leaflet Routing Machine); a linha da rota continua no mapa */
+  .leaflet-routing-container { display: none !important; }
+
+  .no-signal {
+    position: absolute;
+    top: 6px; left: 50%;  /* esticado até perto das laterais do mapa */
+	  transform: translate(-50%,0);
+	  width: fit-content;  
+    background: rgba(10,10,10,0.92);
+    border: 2px solid var(--red);
+    padding: 6px 15px;
+    display: none;
+    align-items: center; justify-content: center; gap: 6px;
+    /*text-align: left;*/
+    border-radius: 999px;
+    z-index: 999;
+    pointer-events: none;
+	white-space: nowrap;
+  }
+  .no-signal h2 { font-family: 'Bebas Neue'; font-size: 14px; letter-spacing: 1.5px; color: var(--red); margin: 0; }
+  .no-signal p  { font-size: 10px; color: #bbb; letter-spacing: 0.5px; }
+  .no-signal.online { border-color: var(--turquesa); }
+  .no-signal.online h2 { color: var(--turquesa); }
+
+  @media (max-width: 500px) {
+    .stops-panel { display: none; }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     NAVEGAÇÃO ENTRE TELAS (início / itinerários / mapa)
+     ══════════════════════════════════════════════════════════ */
+  .hidden { display: none !important; }
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+  .btn-back {
+    background: none;
+    border: 1px solid #3a4a5a;
+    color: var(--white);
+    width: 30px; height: 34px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn-back svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* ── telas claras (início e itinerários) ── */
+  .light-view {
+    background: #fbfbfb;
+    color: #1d1d1f;
+    font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* ── TELA INICIAL ── */
+  .home-wrap {
+    flex: 1;
+    width: 100%; max-width: 480px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    overflow-y: auto;
+  }
+  .home-campus { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: #7a7a7a; margin-bottom: 34px; }
+  .home-logo {
+    width: min(46vw, 200px); height: min(46vw, 200px);
+    border-radius: 50%;
+    background: #0f1b33;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-size: 72px;
+    margin-bottom: 30px;
+    flex-shrink: 0;
+  }
+  .home-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .home-title { font-size: clamp(34px, 9vw, 46px); line-height: 1.15; font-weight: 700; color: #333; margin-bottom: 16px; }
+  .home-desc { font-size: 15px; line-height: 1.6; color: #6b6b6b; max-width: 340px; margin-bottom: 32px; }
+  .home-desc b { color: #333; }
+
+  .btn-home {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 18px;
+    border-radius: 18px;
+    font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .btn-home svg { width: 22px; height: 22px; fill: currentColor; }
+  .btn-home.primary { background: #0a1a33; color: #fff; border: 2px solid #0a1a33; }
+  .btn-home.outline { background: #fff; color: #0a1a33; border: 2px solid #0a1a33; }
+
+  .erro-dados {
+    width: 100%;
+    background: #fdecea; color: #a1281c;
+    border: 1px solid #f3b9b3; border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 12px; line-height: 1.5; text-align: left;
+  }
+
+  /* ── TELA DE ITINERÁRIOS ── */
+  .itin-head { background: #0a1a33; flex-shrink: 0; }
+  .itin-head-in { max-width: 640px; margin: 0 auto; width: 100%; }
+  .itin-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px 10px; color: #fff; }
+  .itin-bar h2 { font-size: 18px; font-weight: 600; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.12); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+  .itin-tabs { display: flex; gap: 26px; padding: 0 20px; }
+  .tab {
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: #8b95a8;
+    font-family: inherit; font-weight: 600; font-size: 14px; letter-spacing: 0.5px;
+    padding: 10px 0 12px;
+    cursor: pointer;
+  }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  .itin-body { flex: 1; overflow-y: auto; }
+  .itin-inner { max-width: 640px; margin: 0 auto; padding: 20px 16px 32px; }
+  .itin-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #8a90a0; margin: 0 2px 10px; }
+
+  /* Caixas dos horários: tamanho fixo = largura da barra ÷ nº de horários da manhã (o período com mais horários).
+     Manhã (6) ocupa a barra inteira; tarde e noite usam as mesmas caixas, sem esticar. */
+  .itin-times {
+    --chips-por-linha: 6;
+    --gap-chips: 4px;
+    display: flex; gap: var(--gap-chips);
+    overflow-x: auto; padding: 2px 0 8px; margin-bottom: 8px; scrollbar-width: thin;
+    container-type: inline-size;
+  }
+  .chip {
+    flex: 0 0 calc((100% - (var(--chips-por-linha) - 1) * var(--gap-chips)) / var(--chips-por-linha));
+    min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 9px 0;
+    border-radius: 10px;
+    border: 1px solid #dfe3ec;
+    background: #fff;
+    color: #1b2540;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip-h { font-size: 18px; font-weight: 600; white-space: nowrap; }
+  /* só em telas muito estreitas (barra < 320 px) a caixa fica menor que o texto de 18 px */
+  @container (max-width: 320px) { .chip-h { font-size: 16px; } }
+  .chip.done { opacity: 0.45; }
+  .chip.selected { border-color: #0a1a33; box-shadow: inset 0 0 0 1px #0a1a33; opacity: 1; }
+  .chip.current { background: #0a1a33; border-color: #0a1a33; color: var(--yellow); font-weight: 700; opacity: 1; }
+
+  .itin-status {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border: 1px solid #dfe3ec; border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+  }
+  .st-icon { width: 48px; height: 48px; border-radius: 50%; background: #eef0f6; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .st-txt { flex: 1; min-width: 0; }
+  .st-t { font-size: 13px; font-weight: 700; color: #1b2540; }
+  .st-h { font-size: 15px; font-weight: 700; color: #1b2540; margin-top: 2px; }
+  .st-badge { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; white-space: nowrap; background: #e8eaf0; color: #55607a; }
+  .st-badge.live { background: #d9f7e3; color: #157a36; }
+  .st-badge.wait { background: #fff1c2; color: #8a6500; }
+
+  .itin-sem-sinal { flex-shrink: 0; background: #fdecea; color: #a1281c; border-top: 1px solid #f3b9b3; padding: 10px 14px; font-size: 14px; text-align: center; }
+  .itin-sem-sinal b { letter-spacing: 1px; margin-right: 6px; }
+  .itin-sem-sinal.online { background: #e1f8f3; color: #08705f; border-top-color: #a9e8dc; font-weight: 600; }
+
+  .itin-stops { background: #fff; border: 1px solid #e1e4ec; border-radius: 16px; overflow: hidden; }
+
+  /* lista de paradas no tema claro */
+  .light-view .stop-item { padding: 14px 16px; border-bottom: 1px solid #eceef4; align-items: center; }
+  .light-view .stop-item:last-child { border-bottom: none; }
+  .light-view .stop-item:hover { background: #f6f7fb; }
+  .light-view .stop-line { margin-top: 0; }
+  .light-view .stop-dot { background: #fff; border-color: #b8bfd0; }
+  .light-view .stop-name { font-size: 14px; color: #44506b; }
+  /* Próxima parada (tela de itinerários): fundo na cor de destaque, preenchido por um tom mais escuro
+     conforme o ônibus se aproxima. Mesmo padrão da barra do mapa (largura = --prog, transição linear de 1 s). */
+  .light-view .stop-item.active { position: relative; overflow: hidden; isolation: isolate; background: var(--yellow); opacity: 1; }
+  .light-view .stop-item.active::before {
+    content: '';
+    position: absolute; top: 0; bottom: 0; left: 0;
+    width: var(--prog, 0%);
+    background: var(--yellow-escuro);
+    transition: width 1s linear;
+    z-index: -1;
+  }
+  .light-view .stop-item.active .badge-prox { background: #0a1a33; color: var(--yellow); }
+  .light-view .stop-item.active .stop-name { color: #0a1a33; font-weight: 600; }
+  .light-view .stop-item.passed .stop-name { color: #9aa3b8; }
+  .badge-prox { display: none; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 9px; border-radius: 20px; background: var(--yellow); color: #0a1a33; flex-shrink: 0; }
+  .stop-item.active .badge-prox { display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ TELA INICIAL ══════════ -->
+<section id="view-home" class="view light-view">
+  <div class="home-wrap">
+    <div class="home-campus">🎓 UFERSA • CAMPUS ANGICOS</div>
+    <div class="home-logo"><img src="BUS.png" alt="" onerror="this.parentNode.textContent='🚌'"></div>
+    <h1 class="home-title">Rota - UFERSA</h1>
+    <p class="home-desc">Sistema inteligente de monitoramento do transporte universitário para o campus <b>Angicos</b>.</p>
+
+    <button class="btn-home primary" onclick="mostrarTela('map')">
+      <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+      MAPA EM TEMPO REAL
+    </button>
+    <button class="btn-home outline" onclick="mostrarTela('itin')">
+      <svg viewBox="0 0 24 24"><path d="M19 15.18V7c0-2.21-1.79-4-4-4s-4 1.79-4 4v10c0 1.1-.9 2-2 2s-2-.9-2-2V8.82C8.16 8.4 9 7.3 9 6c0-1.66-1.34-3-3-3S3 4.34 3 6c0 1.3.84 2.4 2 2.82V17c0 2.21 1.79 4 4 4s4-1.79 4-4V7c0-1.1.9-2 2-2s2 .9 2 2v8.18c-1.16.41-2 1.51-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82z"/></svg>
+      INFORMAÇÕES DE ROTAS
+    </button>
+
+    <div id="erro-dados" class="erro-dados hidden"></div>
+	<p>Commit: <span id="commit-hash"><!-- HASH_START -->7b329e8<!-- HASH_END --></span></p>  
+  </div>
+</section>
+
+<!-- ══════════ TELA DE ITINERÁRIOS ══════════ -->
+<section id="view-itin" class="view light-view hidden">
+  <div class="itin-head">
+    <div class="itin-head-in">
+      <div class="itin-bar">
+        <button class="icon-btn" onclick="mostrarTela('home')" aria-label="Voltar">
+          <svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </button>
+        <h2>Informações de Rotas</h2>
+        <button class="icon-btn" onclick="mostrarTela('map')" aria-label="Mapa em tempo real">
+          <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+        </button>
+      </div>
+      <div class="itin-tabs" id="itin-tabs"></div>
+    </div>
+  </div>
+
+  <div class="itin-body">
+    <div class="itin-inner">
+      <div class="itin-label">HORÁRIOS DE SAÍDA</div>
+      <div class="itin-times" id="itin-times"></div>
+      <div class="itin-status" id="itin-status"></div>
+
+      <div class="itin-label" id="itin-stops-titulo">PARADAS DA LINHA</div>
+      <div class="itin-stops" id="itin-stops-list"></div>
+    </div>
+  </div>
+
+  <div class="itin-sem-sinal hidden" id="itin-sem-sinal"><b>SEM SINAL</b>O ônibus ainda não iniciou o rastreamento.</div>
+</section>
+
+<!-- ══════════ TELA DO MAPA ══════════ -->
+<div id="view-map" class="view hidden">
+<header>
+  <div class="header-left">
+    <button class="btn-back" onclick="mostrarTela('home')" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+    <div class="bus-icon-wrap"><img src="BUS.png" alt="Logo" style="width: 100%; height: auto;"></div>
+    <div class="line-name">CIRCULAR - UFERSA</div>
+  </div>
+  <div class="live-pill" id="live-pill">
+    <div class="live-dot"></div>
+    AO VIVO
+  </div>
+</header>
+
+<div class="next-stop-monitor" id="next-monitor">
+  <div class="monitor-left">
+    <div class="stop-icon-wrap"><img src="parada.png" alt="Logo" style="width:130%; height: auto;"></div>
+    <div class="monitor-text">
+      <div class="monitor-label" id="next-stop-label" style="display:none">Próxima parada</div> <div class="monitor-stop-name" id="next-stop-name">AGUARDANDO ÔNIBUS</div>
+    </div>
+  </div>
+  <div class="monitor-right">
+    <div class="monitor-dist" id="next-stop-dist">—</div>
+    <div class="monitor-dist-unit" id="next-stop-unit">metros</div>
+  </div>
+</div>
+
+<div class="main-area">
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <div class="no-signal" id="no-signal">
+      <h2>SEM SINAL</h2>
+      <p>O ônibus ainda não iniciou o rastreamento.</p>
+    </div>
+  </div>
+
+  <div class="stops-panel">
+    <div class="stops-panel-title">Paradas da linha</div>
+    <div class="stops-list" id="stops-list"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="info-item">
+    <span class="info-label">Atualizado às</span>
+    <span class="info-value" id="last-update">—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Precisão GPS0</span>
+    <span class="info-value green" id="accuracy">—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Parada</span>
+    <span class="info-value yellow" id="stop-counter">—/—</span>
+  </div>
+  <div class="info-item">
+    <span class="info-label">Itinerário</span>
+    <span class="info-value yellow" id="itin-info">—</span>
+  </div>
+ <!-- <button class="btn-center" onclick="centralizar()">⊙ CENTRALIZAR</button> -->
+</div>
+<button class="btn-center" onclick="centralizar()">⊙ CENTRALIZAR</button>
+</div><!-- /view-map -->
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────
+//const API_URL_BASE = 'https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+//const API_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(API_URL_BASE);
+//const API_URL = 'https://corsproxy.io/?url=https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+const API_URL = 'https://api-v2.rota.ufersa.dev.br/coordinates/angicos';
+const ARQ_PARADAS  = 'paradas.txt';
+const ARQ_HORARIOS = 'horarios.txt';
+const ARQ_PONTOS   = 'pontos_de_passagem.txt';   // waypoints da rota (id, lat/lng, nome)
+const ARQ_ROTAS    = 'rotas.txt';                // waypoints de cada horário (ids de pontos_de_passagem.txt)
+
+const VERSAO               = '2026-11-07-a';   // aparece no modo ?debug, para saber qual index.html está rodando
+
+const POLL_INTERVAL        = 5000;  // consulta à API a cada 5 segundos
+const CHEGADA_METROS       = 20;    // "chegando" na parada
+const PASSAGEM_METROS      = 50;    // passou pela parada se chegou a menos disso e depois se afastou
+const SINAL_MAX_SEG        = 180;   // posição mais antiga que isso = ônibus não está enviando localização
+const SEM_SINAL_CANCELA_MIN = 10;   // sem sinal por X min durante a viagem = viagem cancelada
+const MOVIMENTO_METROS     = 30;    // ônibus parado na parada 1 só "parte" depois de se afastar disso do ponto onde começou
+const RAIO_FIM_M           = 60;    // chegou à última parada (o ponto final do trajeto pode ficar a ~25 m dela)
+const RAIO_INICIO_M        = 150;   // ônibus a menos disso da parada 1 = saída normal
+const ESPERA_INICIO_SEG    = 20;    // ônibus começou a enviar localização: espera X s e mostra a primeira parada
+const ENCERRA_APOS_SEG     = 15;    // chegou ao ponto final: espera X s e mostra "ROTA DAS XX:XX ENCERRADA"
+const ENCERRADA_ATE_MIN    = 10;    // "ROTA ... ENCERRADA" fica até X min antes do próximo horário
+const ATRASO_MAX_MIN       = 15;    // sem o ônibus enviar dados: X min depois do horário, passa para o próximo
+const VIAGEM_MAX_MIN       = 90;    // trava de segurança: viagem que passa disso é descartada
+const REENCONTRAR_SEG      = 60;    // sem posições por mais que isso durante a viagem: descobre de novo a próxima parada
+const MOV_MIN_M            = 25;    // deslocamento mínimo para estimar o rumo do ônibus
+const DURACAO_MINIMA_MIN   = 15;    // o trajeto não se cumpre em menos que isso (ônibus visto no meio da viagem: descobre de qual horário é)
+const SAIDA_ATRASADA_MAX_MIN = 25;  // ônibus que sai do ponto de partida até X min depois do horário anterior ainda faz aquele horário
+const API_TS_UTC           = false; // true se o "timestamp" da API estiver em UTC (false = horário local)
+
+// Abra a página com ?teste no final do endereço para ignorar horário e idade do sinal
+const MODO_TESTE = new URLSearchParams(location.search).has('teste');
+const DEBUG      = new URLSearchParams(location.search).has('debug');
+
+// vista inicial do mapa
+const MAPA_INICIAL = {  lat: -5.663484, lng: -36.606646, zoom: 15 };
+
+  // Mapa com tiles escuros
+const map = L.map('map', { zoomControl: false }).setView([MAPA_INICIAL.lat, MAPA_INICIAL.lng], MAPA_INICIAL.zoom);
+  //L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  //attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 16
+  
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap', maxZoom: 20, maxNativeZoom: 19
+}).addTo(map);
+
+ if (MODO_TESTE) map.on('click', function(e) {alert("You clicked the map at " + e.latlng.toString()); });
+
+// A rota é desenhada aqui (e não pelo controle do Leaflet Routing Machine): fica numa camada única, esvaziada
+// antes de cada rota nova, então nunca há duas rotas no mapa. Só o serviço de rotas do OSRM é usado.
+const roteador   = L.Routing.osrmv1();
+const camadaRota = L.layerGroup().addTo(map);
+const ESTILOS_ROTA = [ { color: 'black',   opacity: 0.25, weight: 10 },    // sombra
+                       { color: 'white',   opacity: 0.8,  weight: 7  },    // contorno
+                       { color: '#006633', opacity: 1,    weight: 6  } ];  // centro
+let pedidoRota = 0;
+
+const busIcon = L.divIcon({
+  //html: '<div class="bus-icon-wrap">🚌</div>',
+  //className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
+  html: '<div class="bus-icon-wrap2"><img src="BUS2.png" alt="Logo" style="width: 100%; height: auto;"></div>',
+  className: '', iconSize: [38,38], iconAnchor: [19,19], popupAnchor: [0,-22]
+  
+});
+
+function makeStopIcon(estado) {
+  return L.divIcon({
+   // html: `<div class="stop-marker ${estado}">🚏</div>`,
+    html: `<div class="stop-marker ${estado}"><img src="parada.png" alt="Logo" style="width: 100%; height: auto;"></div>`,
+    className: '', iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-16]
+  });
+}
+
+// ── REGISTRO DE EVENTOS (aparece na tela com ?debug) ──────────
+const LOG = [];
+function registrar(txt) {
+  const d = new Date(), p2 = n => String(n).padStart(2, '0');
+  LOG.push(`${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())} ${txt}`);
+  if (LOG.length > 60) LOG.shift();
+  if (DEBUG) console.log('[circular]', txt);
+}
+function atualizarDebug() {
+  if (!DEBUG) return;
+  let el = document.getElementById('log-debug');
+  if (!el) {
+    el = document.createElement('pre'); el.id = 'log-debug';
+    el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;margin:0;padding:6px 8px;z-index:3000;' +
+      'background:rgba(0,0,0,.88);color:#9fe39f;font:10px/1.35 "IBM Plex Mono",monospace;white-space:pre-wrap;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  const est = viagem
+    ? `viagem ${viagem.it.hora} · fase ${viagem.fase} · próxima ${viagem.prox !== null ? PARADAS[viagem.prox].nome : '-'} · posições ${viagem.hist.length}`
+    : `sem viagem · da vez ${(itinerarioPorHorario() || {}).hora || '-'}${encerradaVigente() ? ' · encerrada ' + encerradaVigente().hora : ''}`;
+  el.textContent = `[${VERSAO}] ${est} · sinal ${sinalOk ? 'ok' : 'sem'} · rota ${rotaIdsCarregada ? rotaIdsCarregada.split(',').length + ' pontos' : '-'}\n` + LOG.slice(-14).join('\n');
+}
+
+// ── ESTADO ───────────────────────────────────────────────────
+let PARADAS = [], HORARIOS = [], PERIODOS = [], TXT_HORARIOS = '';
+let PONTOS = {}, ROTAS = {};     // pontos_de_passagem.txt (id → ponto) e rotas.txt (horário → ids dos pontos)
+let busMarker   = null;
+let centrar     = true;
+let stopMarkers = [], estadoMarkers = [];
+
+let viagem        = null;        // { it, seq, fase, prox, ... }  (prox = índice da PRÓXIMA parada; só vale em 'movimento' e 'chegada')
+let ultimoFim     = null;        // { it, dia } última viagem que chegou ao ponto final ("ROTA ENCERRADA")
+let leituraCentrada = null;
+const concluidas  = new Set();   // viagens já feitas hoje (dia|id)
+let ultimaLeitura = null;        // { lat, lng, ts:Date }
+let sinalOk       = false;
+let abaAtual      = null;
+let ultimoCorId   = null;
+let ultimoAtivo   = -2;
+let itinSelecionado = null;      // horário aberto para consulta (null = acompanha o atual)
+
+
+let ROTA = [];                   // coordenadas da rota desenhada no mapa (Leaflet Routing Machine)
+let ROTA_SEQ = [];                // paradas (índices) que a rota carregada atende; vazio = todas
+let ROTA_CHAVE = null, rotaIdsCarregada = null, bloqueioRota = 0;
+let ROTA_INFO = null;            // { cum[], idx[], s[], n, seq, rotaChave } — posição de cada parada ao longo da rota
+
+// ── UTILIDADES ───────────────────────────────────────────────
+const esc      = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chaveDia = it => new Date().toDateString() + '|' + it.id;
+const hmin     = it => it.hora.replace(':', 'h') + 'min';
+
+function minutosAgora() {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+}
+
+function distancia(lat1, lng1, lat2, lng2) {
+  const R    = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    = Math.sin(dLat/2)**2 +
+               Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── CARREGAMENTO DOS ARQUIVOS ────────────────────────────────
+async function carregarTexto(url) {
+  const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+  return r.text();
+}
+
+// paradas.txt: linhas no formato { id: 1, nome: 'NOME', lat: -5.65, lng: -36.61 },
+function parseParadas(txt) {
+  const re = /id:\s*(\d+)\s*,\s*nome:\s*(['"])(.*?)\2\s*,\s*lat:\s*(-?\d+(?:\.\d+)?)\s*,\s*lng:\s*(-?\d+(?:\.\d+)?)/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(txt))) out.push({ id: +m[1], nome: m[3], lat: +m[4], lng: +m[5] });
+  return out;
+}
+
+// horarios.txt: linhas no formato Manhã,06:20,07:20,...
+const normHora = h => { const m = String(h).trim().match(/^(\d{1,2})\s*[:hH.]\s*(\d{2})(?:\s*min)?$/); return m ? m[1].padStart(2, '0') + ':' + m[2] : null; };
+const parseIds = txt => String(txt || '').split(',').map(x => +x.trim()).filter(n => Number.isFinite(n) && n > 0);
+
+// horarios.txt — uma linha por horário:
+//   Turno,HH:MM,{ids das paradas desse horário},
+//   Ex.: Noite,22:10,{1,2,3,4,5,6,13,14,15,16,17,18},
+// Também aceita os formatos anteriores:
+//   Turno,{horários},{ids de todos},[HH:MM,{ids só desse horário},...]
+//   Turno,06:20,07:20,...   (todas as paradas)
+function parseHorarios(txt) {
+  const itens = [], periodos = [], cont = {};
+  const add = (periodo, h, ids) => {
+    const hora = normHora(h);
+    if (!hora) return;
+    cont[periodo] = (cont[periodo] || 0) + 1;
+    const [hh, mm] = hora.split(':').map(Number);
+    itens.push({ periodo, n: cont[periodo], hora, min: hh * 60 + mm, id: periodo + '|' + hora, ids });
+  };
+
+  const ignoradas = [];
+  const processarLinha = linha => {
+    linha = linha.trim();
+    const periodo = linha.split(',')[0].trim();
+    if (!periodo) return;
+    periodos.push(periodo);
+
+    // formato atual: Turno,HH:MM,{ids}
+    const c = linha.match(/^[^,{]+,\s*(\d{1,2}\s*[:hH.]\s*\d{2})\s*,\s*\{([^}]*)\}/);
+    if (c) { add(periodo, c[1], parseIds(c[2])); return; }
+
+    // formato agrupado: Turno,{horários},{ids},HH:MM,{ids},...
+    const m = linha.match(/^[^,{]+,\s*\{([^}]*)\}\s*,\s*\{([^}]*)\}\s*,?(.*)$/);
+    if (m) {
+      const padrao = parseIds(m[2]), excecoes = {};
+      const re = /(\d{1,2}:\d{2})\s*,\s*\{([^}]*)\}/g;
+      let x;
+      while ((x = re.exec(m[3]))) excecoes[normHora(x[1])] = parseIds(x[2]);
+      m[1].split(',').forEach(h => add(periodo, h, excecoes[normHora(h)] || padrao));
+      return;
+    }
+
+    // formato antigo: Turno,06:20,07:20,...  (linha com chaves mal fechadas NÃO entra aqui:
+    // senão o horário ficaria com todas as paradas em vez das dele)
+    if (linha.includes('{') || linha.includes('}')) return;
+    linha.split(',').slice(1).forEach(h => add(periodo, h, []));
+  };
+  txt.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(linha => {
+    const antes = itens.length;
+    processarLinha(linha);
+    if (linha.trim() && itens.length === antes) ignoradas.push(linha.trim());
+  });
+  itens.sort((x, y) => x.min - y.min);
+  return { itens, ignoradas, periodos: [...new Set(periodos)].filter(p => cont[p]) };
+}
+
+// pontos_de_passagem.txt: linhas no formato  1,L.latLng(-5.654135, -36.613553), "BLOCO DE SALA 1",
+function parsePontos(txt) {
+  const re = /^\s*(\d+)\s*,\s*L\.latLng\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)\s*,\s*(['"])(.*?)\4/;
+  const out = {};
+  txt.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(l => {
+    const m = l.match(re);
+    if (m) out[+m[1]] = { lat: +m[2], lng: +m[3], nome: m[5] };
+  });
+  return out;
+}
+
+// rotas.txt: uma linha por horário, como em horarios.txt, mas com os ids de pontos_de_passagem.txt:
+//   Noite,22:10,{1,2,3,...,33},
+function parseRotas(txt) {
+  const out = {};
+  txt.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(l => {
+    const m = l.trim().match(/^([^,{]+),\s*(\d{1,2}\s*[:hH.]\s*\d{2})\s*,\s*\{([^}]*)\}/);
+    const hora = m && normHora(m[2]);
+    if (hora) out[m[1].trim() + '|' + hora] = parseIds(m[3]);
+  });
+  return out;
+}
+
+function mostrarErroDados(e) {
+  console.error(e);
+  const box = document.getElementById('erro-dados');
+  box.textContent = `Não foi possível carregar ${ARQ_PARADAS} / ${ARQ_HORARIOS}. ` +
+    'Abra a página por um servidor (GitHub Pages ou "python3 -m http.server"), não direto do arquivo. ' +
+    `Detalhe: ${e.message}`;
+  box.classList.remove('hidden');
+}
+
+// ── ITINERÁRIO DA VEZ ────────────────────────────────────────
+let proximoEhAmanha = false;   // não sobrou horário hoje: o próximo é o primeiro de amanhã
+
+// Itinerário "da vez" quando não há viagem em andamento: o primeiro ainda não concluído cujo horário
+// não passou de ATRASO_MAX_MIN (sem o ônibus enviar dados, depois disso passa para o seguinte).
+function itinerarioPorHorario() {
+  proximoEhAmanha = false;
+  if (!HORARIOS.length) return null;
+  const agora = minutosAgora();
+  const it = HORARIOS.find(h => !concluidas.has(chaveDia(h)) && agora <= h.min + ATRASO_MAX_MIN);
+  if (it) return it;
+  proximoEhAmanha = true;
+  return HORARIOS[0];
+}
+
+// Horário cuja rota acabou de encerrar: "ROTA DAS XX:XX ENCERRADA" fica no ar até
+// ENCERRADA_ATE_MIN min antes do horário seguinte (ou até o fim do dia, se foi o último).
+function encerradaVigente() {
+  if (!ultimoFim || ultimoFim.dia !== new Date().toDateString()) return null;
+  const prox = HORARIOS.find(h => h.min > ultimoFim.it.min);
+  if (prox && minutosAgora() >= prox.min - ENCERRADA_ATE_MIN) return null;
+  return ultimoFim.it;
+}
+const itinerarioCorrente = () => viagem ? viagem.it : itinerarioPorHorario();
+
+// horário aberto na tela de itinerários (o selecionado ou, se nenhum, o atual)
+const itinExibido = () => (itinSelecionado && HORARIOS.find(h => h.id === itinSelecionado)) || itinerarioCorrente();
+
+// paradas de um horário: índices de PARADAS, na ordem da rota (sem ids válidos = todas)
+function seqDe(it) {
+  const todas = PARADAS.map((_, i) => i);
+  if (!it || !it.ids || !it.ids.length) return todas;
+  const set = new Set(it.ids);
+  const seq = todas.filter(i => set.has(PARADAS[i].id));
+  return seq.length >= 2 ? seq : todas;
+}
+const seqCorrente = () => viagem ? viagem.seq : seqDe(itinerarioCorrente());
+
+function statusItinerario(it) {
+  if (viagem && viagem.it.id === it.id) return ['Em andamento', 'live'];
+  const cor = itinerarioCorrente();            // também atualiza proximoEhAmanha
+  if (cor && cor.id !== it.id) {               // outro horário aberto para consulta
+    if (proximoEhAmanha) return ['Encerrado', ''];
+    return minutosAgora() < it.min ? ['Agendado', 'wait'] : ['Encerrado', ''];
+  }
+  if (proximoEhAmanha && it === HORARIOS[0])   return ['Amanhã', 'wait'];
+  return ['Próxima saída', 'wait'];
+}
+
+// ── DISTÂNCIA PELA ROTA ──────────────────────────────────────
+// A rota (polilinha) vem do Leaflet Routing Machine. Cada parada é associada a um
+// ponto da rota, em ordem crescente (programação dinâmica), o que resolve as paradas
+// que passam duas vezes no mesmo lugar (ida/volta). A distância até a próxima parada
+// é o comprimento da rota entre a posição do ônibus e essa parada.
+const plano = (a, b) => {
+  const kx = Math.cos(a.lat * Math.PI / 180) * 111320;
+  return Math.hypot((a.lng - b.lng) * kx, (a.lat - b.lat) * 110574);
+};
+
+function projetar(lat, lng, j0, j1) {
+  const cum = ROTA_INFO.cum;
+  const kx = Math.cos(lat * Math.PI / 180) * 111320, ky = 110574;
+  let melhor = { off: Infinity, s: 0 };
+  for (let j = j0; j < j1; j++) {
+    const a = ROTA[j], b = ROTA[j + 1];
+    const ax = (a.lng - lng) * kx, ay = (a.lat - lat) * ky;
+    const dx = (b.lng - a.lng) * kx, dy = (b.lat - a.lat) * ky;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const off = Math.hypot(ax + t * dx, ay + t * dy);
+    if (off < melhor.off) melhor = { off, s: cum[j] + t * (cum[j + 1] - cum[j]) };
+  }
+  return melhor;
+}
+
+function prepararRota() {
+  ROTA_INFO = null;
+  const n = ROTA.length;
+  const S = ROTA_SEQ.length >= 2 ? ROTA_SEQ : PARADAS.map((_, i) => i);   // paradas atendidas por esta rota
+  const N = S.length;
+  if (n < 2 || N < 2) return;
+
+  const cum = new Float64Array(n);
+  for (let j = 1; j < n; j++) cum[j] = cum[j-1] + distancia(ROTA[j-1].lat, ROTA[j-1].lng, ROTA[j].lat, ROTA[j].lng);
+  ROTA_INFO = { cum, n, idx: [], s: [], seq: S, rotaChave: ROTA_CHAVE };
+
+  // paradas em ordem ao longo da rota, minimizando a soma das distâncias parada↔rota
+  const back = Array.from({ length: N }, () => new Int32Array(n));
+  let prev = new Float64Array(n);
+  for (let j = 0; j < n; j++) prev[j] = plano(PARADAS[S[0]], ROTA[j]);
+  for (let i = 1; i < N; i++) {
+    const cur = new Float64Array(n);
+    let melhor = Infinity, k = 0;
+    for (let j = 0; j < n; j++) {
+      if (prev[j] < melhor) { melhor = prev[j]; k = j; }
+      cur[j] = melhor + plano(PARADAS[S[i]], ROTA[j]);
+      back[i][j] = k;
+    }
+    prev = cur;
+  }
+  let j = 0;
+  prev.forEach((v, x) => { if (v < prev[j]) j = x; });
+  const pos = new Array(N);
+  pos[N-1] = j;
+  for (let i = N - 1; i > 0; i--) { j = back[i][j]; pos[i-1] = j; }
+
+  S.forEach((gi, i) => {   // idx[] e s[] ficam indexados pelo índice da parada em PARADAS
+    ROTA_INFO.idx[gi] = pos[i];
+    ROTA_INFO.s[gi]   = projetar(PARADAS[gi].lat, PARADAS[gi].lng, Math.max(0, pos[i] - 1), Math.min(n - 1, pos[i] + 1)).s;
+  });
+}
+
+// a rota que está carregada é a deste horário?
+const rotaPronta = it => !!(ROTA_INFO && it && ROTAS[it.id] && ROTA_INFO.rotaChave === ROTAS[it.id].join(','));
+
+// a rota carregada tem um trecho contínuo entre as duas paradas?
+function rotaTemTrecho(ant, prox) {
+  const R = ROTA_INFO;
+  if (!R || ant == null || ant < 0 || R.idx[ant] == null || R.idx[prox] == null) return false;
+  return R.seq.indexOf(ant) + 1 === R.seq.indexOf(prox);
+}
+
+// distância (m) do ônibus até a próxima parada seguindo a rota; null = usar linha reta
+function distanciaPorRota(l, prox, ant) {
+  const R = ROTA_INFO;
+  if (!rotaTemTrecho(ant, prox)) return null;
+  const MARGEM = 15;   // vértices de tolerância antes/depois do trecho esperado
+  const pos = projetar(l.lat, l.lng,
+    Math.max(0, R.idx[ant] - MARGEM), Math.min(R.n - 1, R.idx[prox] + MARGEM));
+  if (pos.off > 150) return null;          // ônibus fora da rota
+  const d = R.s[prox] - pos.s;
+  return d > 0 ? d : null;                 // já passou da parada
+}
+
+// ── ROTA DESENHADA NO MAPA, POR HORÁRIO (rotas.txt) ──────────
+const waypointsDe = ids => ids.map(id => PONTOS[id]).filter(Boolean)
+  .map(p => new L.Routing.Waypoint(L.latLng(p.lat, p.lng), p.nome));
+
+// desenha a rota do horário da vez; o desenho anterior sai na hora e respostas atrasadas são descartadas
+function desenharRota(wps, chave, seq) {
+  const meu = ++pedidoRota;
+  camadaRota.clearLayers();
+  roteador.route(wps, function (err, rotas) {
+    if (meu !== pedidoRota) return;                         // pedido já substituído por outro horário
+    if (err || !rotas || !rotas.length) {
+      registrar('rota não carregada: ' + ((err && err.message) || 'sem resposta') + ' (tenta de novo em 15 s)');
+      rotaIdsCarregada = null; bloqueioRota = Date.now() + 15000;
+      return;
+    }
+    const coords = rotas[0].coordinates;
+    ESTILOS_ROTA.forEach(st => L.polyline(coords, st).addTo(camadaRota));
+    ROTA = coords; ROTA_SEQ = seq; ROTA_CHAVE = chave;
+    if (PARADAS.length) prepararRota();
+    registrar(`rota desenhada: ${chave.split(',').length} pontos de passagem, ${coords.length} vértices`);
+  });
+}
+
+// refaz a linha da rota quando o horário da vez usa outros waypoints
+function atualizarRotaMapa() {
+  if (!PARADAS.length || Date.now() < bloqueioRota) return;
+  const it  = itinerarioCorrente();
+  const ids = it && ROTAS[it.id];
+  if (!ids) return;                                  // horário sem rota em rotas.txt: mantém a que está no mapa
+  const chave = ids.join(','), seq = seqDe(it);
+  if (chave !== rotaIdsCarregada) {
+    const wps = waypointsDe(ids);
+    if (wps.length < 2) return;
+    rotaIdsCarregada = chave;
+    registrar(`rota do horário ${it.hora}: ${ids.length} pontos`);
+    desenharRota(wps, chave, seq);
+  } else if (ROTA.length && seq.join(',') !== (ROTA_SEQ.length ? ROTA_SEQ : PARADAS.map((_, i) => i)).join(',')) {
+    ROTA_SEQ = seq; prepararRota();                  // mesma rota, outras paradas
+  }
+}
+
+// ── PARADAS (mapa + as duas listas) ──────────────────────────
+function renderizarParadas() {
+  const listas = [
+    { el: document.getElementById('stops-list'), badge: false,
+      aoClicar: p => map.flyTo([p.lat, p.lng], 16, { duration: 1 }) },
+    { el: document.getElementById('itin-stops-list'), badge: true,
+      aoClicar: p => { mostrarTela('map'); map.flyTo([p.lat, p.lng], 16, { duration: 1 }); } }
+  ];
+  listas.forEach(l => l.el.innerHTML = '');
+
+  PARADAS.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], { icon: makeStopIcon('') })
+      .addTo(map)
+      .bindPopup(`<b>${esc(p.nome)}</b><br>Parada ${p.id} de ${PARADAS.length}`);
+    stopMarkers.push(m);
+    estadoMarkers.push('');
+
+    listas.forEach(l => {
+      const item = document.createElement('div');
+      item.className   = 'stop-item';
+      item.dataset.idx = i;
+      item.innerHTML = `
+        <div class="stop-line"><div class="stop-dot"></div></div>
+        <div class="stop-info"><div class="stop-name">${esc(p.nome)}</div></div>
+        ${l.badge ? '<span class="badge-prox">PRÓXIMA</span>' : ''}`;
+      item.onclick = () => l.aoClicar(p);
+      l.el.appendChild(item);
+    });
+  });
+}
+
+function rolarAtivo() {
+  document.querySelectorAll('.stop-item.active')
+    .forEach(el => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+}
+
+// ── ABAS / HORÁRIOS ──────────────────────────────────────────
+function renderAbas() {
+  const box = document.getElementById('itin-tabs');
+  box.innerHTML = '';
+  PERIODOS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.dataset.p = p;
+    b.textContent = p.toUpperCase();
+    b.onclick = () => selecionarAba(p);
+    box.appendChild(b);
+  });
+}
+
+function selecionarAba(p) {
+  abaAtual = p;
+  itinSelecionado = null;
+  document.querySelectorAll('#itin-tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  const box = document.getElementById('itin-times');
+  box.innerHTML = '';
+  HORARIOS.filter(h => h.periodo === p).forEach(it => {
+    const c = document.createElement('div');
+    c.className  = 'chip';
+    c.dataset.id = it.id;
+    c.innerHTML  = `<span class="chip-h">${it.hora}</span>`;
+    c.onclick    = () => selecionarHorario(it.id);
+    box.appendChild(c);
+  });
+  atualizarItinerarios(true);
+}
+
+// toca num horário para abrir as paradas dele; tocar de novo volta a acompanhar o atual
+function selecionarHorario(id) {
+  itinSelecionado = itinSelecionado === id ? null : id;
+  atualizarPainel();
+  rolarAtivo();
+}
+
+function atualizarItinerarios(forcarScroll) {
+  const cor  = itinerarioCorrente();
+  const exib = itinExibido();
+
+  document.querySelectorAll('#itin-times .chip').forEach(c => {
+    c.classList.toggle('current', !!cor && c.dataset.id === cor.id);
+    c.classList.toggle('selected', c.dataset.id === itinSelecionado);
+    c.classList.toggle('done', concluidas.has(new Date().toDateString() + '|' + c.dataset.id));
+  });
+
+  if (cor && (forcarScroll || cor.id !== ultimoCorId)) {
+    const el = document.querySelector('#itin-times .chip.current');
+    if (el) el.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+  ultimoCorId = cor ? cor.id : null;
+
+  document.getElementById('itin-stops-titulo').textContent =
+    exib && itinSelecionado ? `PARADAS DA LINHA · ${exib.hora}` : 'PARADAS DA LINHA';
+
+  const st = document.getElementById('itin-status');
+  if (!exib) { st.innerHTML = ''; return; }
+  const [txt, cls] = statusItinerario(exib);
+  const htmlStatus = `
+    <div class="st-icon"><img src="BUS2.png" alt="Logo" style="width: 100%; height: auto;"></div>
+	<div class="st-txt">
+      <div class="st-t">SAÍDA DA UFERSA</div>
+      <div class="st-h">${esc(exib.periodo)} · ${hmin(exib)}</div>
+    </div>
+    <span class="st-badge ${cls}">${txt}</span>`;
+  if (st.dataset.html !== htmlStatus) { st.dataset.html = htmlStatus; st.innerHTML = htmlStatus; }
+	
+}
+	//<div class="st-icon">🚌</div>
+
+// ── VIAGEM ───────────────────────────────────────────────────
+// Fases:  sinal        o ônibus começou a enviar localização: espera ESPERA_INICIO_SEG
+//         pronto       mostra o nome da primeira parada (sem "PRÓXIMA PARADA")
+//         movimento    o ônibus saiu: aparece "PRÓXIMA PARADA"
+//         chegada      chegou ao ponto final: ENCERRA_APOS_SEG depois a viagem termina
+//         localizando  ônibus já em rota ao abrir a página (ou depois de ficar sem posições):
+//                      a próxima parada só é definida quando o movimento mostrar para onde ele vai
+// A viagem só termina quando o ônibus chega ao ponto final, mesmo que o horário seguinte já tenha passado.
+const proximaVisivel = () => viagem && (viagem.fase === 'movimento' || viagem.fase === 'chegada') ? viagem.prox : null;
+
+function setFase(v, nova, extra) {
+  registrar(`${v.it.hora}: ${v.fase} → ${nova}${extra ? ' (' + extra + ')' : ''}`);
+  v.fase = nova;
+}
+
+// Horário de um ônibus que está saindo do ponto de partida. Normalmente é o da vez; mas um ônibus que sai
+// até SAIDA_ATRASADA_MAX_MIN depois do horário anterior (ainda não concluído) é esse horário atrasado,
+// desde que o horário seguinte ainda esteja longe.
+function itinerarioDaSaida(X) {
+  const i = HORARIOS.indexOf(X), P = i > 0 ? HORARIOS[i - 1] : null, agora = minutosAgora();
+  if (P && !concluidas.has(chaveDia(P)) && agora - P.min >= 0 && agora - P.min <= SAIDA_ATRASADA_MAX_MIN &&
+      X.min - agora > ENCERRADA_ATE_MIN) return P;
+  return X;
+}
+
+// Horário de um ônibus que já estava em rota quando a página abriu. O trajeto leva pelo menos
+// DURACAO_MINIMA_MIN: vale o último horário que saiu há tempo suficiente para o ônibus estar onde está.
+function escolherHorarioEmRota(v, p) {
+  const seq = v.seq, ultima = seq[seq.length - 1];
+  const R = rotaPronta(v.it) ? ROTA_INFO : null;
+  const frac = R && R.s[p] != null && R.s[ultima] > 0 ? R.s[p] / R.s[ultima] : seq.indexOf(p) / (seq.length - 1);
+  const agora = minutosAgora();
+  const cand = HORARIOS.filter(h => h.min <= agora && agora - h.min <= VIAGEM_MAX_MIN &&
+                                    !concluidas.has(chaveDia(h)) && agora - h.min >= frac * DURACAO_MINIMA_MIN);
+  return cand.length ? cand[cand.length - 1] : null;
+}
+
+function tentarIniciarViagem(l) {
+  if (!MODO_TESTE && encerradaVigente()) return;       // "ROTA ENCERRADA" ainda no ar: não começa outra
+  const vez = itinerarioPorHorario();
+  if (!vez || (proximoEhAmanha && !MODO_TESTE)) return;
+  const it = itinerarioDaSaida(vez);
+
+  const seq = seqDe(it);
+  const longe = distancia(l.lat, l.lng, PARADAS[seq[0]].lat, PARADAS[seq[0]].lng) > RAIO_INICIO_M;
+  viagem = {
+    it, seq,                                   // paradas deste horário (índices de PARADAS)
+    fase: longe ? 'localizando' : 'sinal',     // longe do ponto de partida = já está em rota
+    prox: null,
+    tSinal: Date.now(), tInicio: Date.now(), tChegada: null,
+    origem: { lat: l.lat, lng: l.lng },
+    hist: [{ lat: l.lat, lng: l.lng }],        // últimas posições distintas, para saber o rumo
+    reatribuir: longe,                         // abriu a página com o ônibus em rota: o horário é descoberto pelo movimento
+    ultimoTs: l.ts.getTime(),
+    minDist: Infinity,
+    ultimoSinal: Date.now()
+  };
+  registrar(`viagem ${it.hora} criada (${longe ? 'ônibus longe da partida: já em rota' : 'ônibus na partida'}${it.id !== vez.id ? '; horário da vez era ' + vez.hora : ''})`);
+}
+
+function concluirViagem() {
+  registrar(`viagem ${viagem.it.hora} concluída (chegou ao ponto final)`);
+  concluidas.add(chaveDia(viagem.it));
+  ultimoFim = { it: viagem.it, dia: new Date().toDateString() };
+  viagem = null;
+}
+
+function chegarAoFim(v) {
+  setFase(v, 'chegada'); v.prox = v.seq[v.seq.length - 1]; v.tChegada = Date.now();
+}
+
+// Próxima parada de um ônibus que já estava em rota: usa o rumo (últimas posições) comparado com a
+// rota desenhada; sem a rota, usa a parada da qual ele está se aproximando. null = ainda não dá para saber.
+function proximaPorMovimento(v) {
+  const h = v.hist;
+  if (h.length < 2) return null;
+  const a = h[0], b = h[h.length - 1];
+  if (distancia(a.lat, a.lng, b.lat, b.lng) < MOV_MIN_M) return null;
+  const kx = Math.cos(b.lat * Math.PI / 180) * 111320, ky = 110574;
+  const hx = (b.lng - a.lng) * kx, hy = (b.lat - a.lat) * ky, hn = Math.hypot(hx, hy);
+
+  if (rotaPronta(v.it)) {
+    const R = ROTA_INFO;
+    let melhor = null;
+    for (let j = 0; j < R.n - 1; j++) {
+      const p0 = ROTA[j], p1 = ROTA[j + 1];
+      const ax = (p0.lng - b.lng) * kx, ay = (p0.lat - b.lat) * ky;
+      const dx = (p1.lng - p0.lng) * kx, dy = (p1.lat - p0.lat) * ky;
+      const len2 = dx * dx + dy * dy;
+      if (len2 === 0) continue;
+      const t   = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2));
+      const off = Math.hypot(ax + t * dx, ay + t * dy);
+      if (off > 60) continue;                                    // longe da rota
+      const cos = (hx * dx + hy * dy) / (hn * Math.sqrt(len2));
+      if (cos < 0.5) continue;                                   // sentido contrário ao da rota
+      const score = off - 20 * cos;
+      if (!melhor || score < melhor.score) melhor = { score, s: R.cum[j] + t * (R.cum[j + 1] - R.cum[j]) };
+    }
+    if (!melhor) return null;
+    for (let k = 1; k < v.seq.length; k++) {                     // primeira parada ainda à frente
+      const gi = v.seq[k];
+      if (R.s[gi] != null && R.s[gi] > melhor.s - 10) return gi;
+    }
+    return v.seq[v.seq.length - 1];
+  }
+
+  let melhorGi = null, md = Infinity;
+  for (let k = 1; k < v.seq.length; k++) {
+    const gi = v.seq[k];
+    const d1 = distancia(a.lat, a.lng, PARADAS[gi].lat, PARADAS[gi].lng);
+    const d2 = distancia(b.lat, b.lng, PARADAS[gi].lat, PARADAS[gi].lng);
+    if (d2 < d1 - 5 && d2 < md) { md = d2; melhorGi = gi; }
+  }
+  return melhorGi;
+}
+
+function avancarViagem(l) {
+  const v = viagem, seq = v.seq, ultima = seq[seq.length - 1];
+  const dist = i => distancia(l.lat, l.lng, PARADAS[i].lat, PARADAS[i].lng);
+  const moveu = distancia(v.origem.lat, v.origem.lng, l.lat, l.lng) > MOVIMENTO_METROS;
+
+  const u = v.hist[v.hist.length - 1];
+  if (!u || distancia(u.lat, u.lng, l.lat, l.lng) >= 8) {
+    v.hist.push({ lat: l.lat, lng: l.lng });
+    if (v.hist.length > 8) v.hist.shift();
+  }
+
+  if (v.fase === 'sinal') {                          // espera os 20 s; se ele sair antes, já está em movimento
+    if (moveu) { setFase(v, 'movimento', 'saiu antes dos ' + ESPERA_INICIO_SEG + ' s'); v.prox = seq[1]; v.minDist = Infinity; }
+    else if (Date.now() - v.tSinal >= ESPERA_INICIO_SEG * 1000) {
+      setFase(v, 'pronto'); v.prox = seq[0]; v.origem = { lat: l.lat, lng: l.lng };
+    }
+    return;
+  }
+  if (v.fase === 'pronto') {                         // parado na primeira parada até entrar em movimento
+    if (moveu) { setFase(v, 'movimento'); v.prox = seq[1]; v.minDist = Infinity; }
+    return;
+  }
+  if (v.fase === 'localizando') {
+    const p = proximaPorMovimento(v);
+    if (p !== null) {
+      // ônibus que já estava em rota quando a página abriu: descobre de qual horário é
+      if (v.reatribuir) {
+        const h = escolherHorarioEmRota(v, p);
+        if (h && h.id !== v.it.id) {
+          const s2 = seqDe(h);
+          if (s2.includes(p)) { registrar(`horário da viagem corrigido: ${v.it.hora} → ${h.hora}`); v.it = h; v.seq = s2; }
+        }
+        v.reatribuir = false;
+      }
+      setFase(v, 'movimento', 'próxima ' + PARADAS[p].nome); v.prox = p; v.minDist = Infinity;
+    } else if (dist(seq[0]) <= RAIO_INICIO_M &&
+               distancia(v.hist[0].lat, v.hist[0].lng, l.lat, l.lng) < MOV_MIN_M) {
+      // parado no ponto de partida (e não a caminho do fim): volta ao fluxo normal de saída
+      setFase(v, 'sinal', 'parado na partida'); v.tSinal = Date.now(); v.origem = { lat: l.lat, lng: l.lng }; v.hist = []; v.reatribuir = false;
+    }
+    return;
+  }
+  if (v.fase === 'chegada') {
+    if (Date.now() - v.tChegada >= ENCERRA_APOS_SEG * 1000) concluirViagem();
+    return;
+  }
+
+  // fase 'movimento'
+  // última parada: chegou = fim da viagem
+  if (v.prox === ultima) { if (dist(ultima) < RAIO_FIM_M) chegarAoFim(v); return; }
+
+  // pulou paradas (falha de GPS): chegou a uma das 2 seguintes
+  const pos = seq.indexOf(v.prox);
+  let chegou = -1;
+  for (let k = pos + 1; k <= Math.min(seq.length - 1, pos + 2); k++) {
+    if (dist(seq[k]) < CHEGADA_METROS) chegou = seq[k];
+  }
+  // passou pela próxima: chegou perto e depois começou a se afastar
+  if (chegou < 0) {
+    const d = dist(v.prox);
+    if (d < v.minDist) v.minDist = d;
+    else if (v.minDist < PASSAGEM_METROS && d > v.minDist + 15) chegou = v.prox;
+  }
+
+  if (chegou >= 0) {
+    if (chegou === ultima) { chegarAoFim(v); return; }
+    v.prox = seq[seq.indexOf(chegou) + 1];
+    v.minDist = Infinity;
+  }
+}
+
+// ── SIMULAÇÃO (?simular18:10) ────────────────────────────────
+// Abre a página "no" horário informado, com um ônibus de mentira que faz a viagem em SIM_VIAGEM_SEG (5 min):
+//   -60 s  a página abre (aguardando a saída)
+//   -40 s  o ônibus começa a enviar localização, parado na primeira parada
+//     0 s  é o horário: o ônibus sai e percorre a rota do horário, parando SIM_PARADA_SEG s em cada parada
+//   +300 s chega ao ponto final
+// Formas aceitas: ?simular18:10   ?simular=22h10   (junto com ?debug mostra o registro de eventos)
+// Sem horário (?simular) usa o horário da vez. Não usa a API: o ônibus é todo simulado.
+const SIM_VIAGEM_SEG = 300, SIM_PARADA_SEG = 3, SIM_ANTES_SEG = 60, SIM_ENVIO_ANTES_SEG = 40;
+const SIM_PEDIDO = (() => {
+  const q = decodeURIComponent(location.search);
+  const m = q.match(/[?&]simular=?(\d{1,2})\s*[:hH.]\s*(\d{2})/i);
+  return m ? { min: +m[1] * 60 + +m[2] } : /[?&]simular(?![A-Za-z])/i.test(q) ? { min: null } : null;
+})();
+let SIM = null;   // { it, t0, perc } enquanto a simulação está ativa
+
+function iniciarSimulacao() {
+  if (!SIM_PEDIDO) return;
+  const it = SIM_PEDIDO.min == null ? itinerarioPorHorario()
+    : HORARIOS.reduce((a, h) => Math.abs(h.min - SIM_PEDIDO.min) < Math.abs(a.min - SIM_PEDIDO.min) ? h : a);
+  if (!it) return;
+  const RD = Date, hoje = new RD();
+  hoje.setHours(0, 0, 0, 0);
+  const t0 = hoje.getTime() + it.min * 60000;
+  const delta = (t0 - SIM_ANTES_SEG * 1000) - RD.now();          // o relógio da página passa a começar 60 s antes do horário
+  window.Date = class extends RD {
+    constructor(...a) { if (a.length) super(...a); else super(RD.now() + delta); }
+    static now() { return RD.now() + delta; }
+  };
+  SIM = { it, t0, perc: null };
+  document.title = `SIMULAÇÃO ${it.hora} · ${document.title}`;
+  registrar(`SIMULAÇÃO do horário ${it.hora}${SIM_PEDIDO.min != null && it.min !== SIM_PEDIDO.min ? ' (o horário pedido não existe: usando o mais próximo)' : ''}: viagem em ${SIM_VIAGEM_SEG / 60} min`);
+}
+
+// Trajeto do ônibus simulado: segue a rota desenhada entre as paradas (ou linha reta, se a rota ainda
+// não carregou) e fica SIM_PARADA_SEG s parado em cada parada, sobre as coordenadas dela.
+function construirPercursoSim(it, seq) {
+  const N = seq.length;
+  const Rn = rotaPronta(it) ? ROTA_INFO : null, rota = Rn ? ROTA.slice() : null;
+  const stop = k => PARADAS[seq[k]];
+  const naRota = k => !!Rn && Rn.s[seq[k]] != null;
+  const pelaRota = k => naRota(k) && naRota(k + 1) && Rn.s[seq[k + 1]] > Rn.s[seq[k]];
+  const dist = [];
+  for (let k = 0; k < N - 1; k++)
+    dist.push(pelaRota(k) ? Rn.s[seq[k + 1]] - Rn.s[seq[k]] : distancia(stop(k).lat, stop(k).lng, stop(k + 1).lat, stop(k + 1).lng));
+  const soma = dist.reduce((x, y) => x + y, 0) || 1;
+  const tempoMov = Math.max(1, SIM_VIAGEM_SEG - SIM_PARADA_SEG * (N - 2));
+  const tPart = [0], tCheg = [0];
+  for (let k = 0; k < N - 1; k++) { tCheg[k + 1] = tPart[k] + tempoMov * dist[k] / soma; tPart[k + 1] = tCheg[k + 1] + SIM_PARADA_SEG; }
+
+  const naPolilinha = s => {
+    const cum = Rn.cum; let lo = 0, hi = cum.length - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cum[mid] <= s) lo = mid; else hi = mid; }
+    const f = Math.max(0, Math.min(1, (s - cum[lo]) / ((cum[hi] - cum[lo]) || 1)));
+    return { lat: rota[lo].lat + (rota[hi].lat - rota[lo].lat) * f, lng: rota[lo].lng + (rota[hi].lng - rota[lo].lng) * f };
+  };
+  return rel => {
+    if (rel >= tCheg[N - 1]) return { lat: stop(N - 1).lat, lng: stop(N - 1).lng };      // no ponto final
+    let k = 0;
+    while (k < N - 2 && rel >= tPart[k + 1]) k++;                                          // trecho da parada k até a k+1
+    if (rel < tCheg[k + 1]) {                                                              // em movimento
+      const f = (rel - tPart[k]) / (tCheg[k + 1] - tPart[k]);
+      if (pelaRota(k)) return naPolilinha(Rn.s[seq[k]] + f * (Rn.s[seq[k + 1]] - Rn.s[seq[k]]));
+      const a = stop(k), b = stop(k + 1);
+      return { lat: a.lat + (b.lat - a.lat) * f, lng: a.lng + (b.lng - a.lng) * f };
+    }
+    return { lat: stop(k + 1).lat, lng: stop(k + 1).lng };                                 // parado na parada k+1
+  };
+}
+
+function leituraSimulada() {
+  const rel = (Date.now() - SIM.t0) / 1000;
+  if (rel < -SIM_ENVIO_ANTES_SEG) return null;                  // o ônibus ainda não começou a enviar
+  const seq = seqDe(SIM.it);
+  let pos = { lat: PARADAS[seq[0]].lat, lng: PARADAS[seq[0]].lng };
+  if (rel >= 0) { if (!SIM.perc) SIM.perc = construirPercursoSim(SIM.it, seq); pos = SIM.perc(rel); }
+  return { lat: pos.lat, lng: pos.lng, ts: new Date() };
+}
+
+// ── LOCALIZAÇÃO DO ÔNIBUS ────────────────────────────────────
+function parseTs(s) {
+  if (!s) return new Date();
+  const d = new Date(String(s).replace(' ', 'T') + (API_TS_UTC ? 'Z' : ''));
+  return isNaN(d) ? new Date() : d;
+}
+
+async function buscarLocalizacao() {
+  if (SIM) { setOnline(true); ultimaLeitura = leituraSimulada(); atualizarEstado(); return; }   // ônibus simulado
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now(), { mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const dados = await res.json();
+    const d = Array.isArray(dados) ? dados[0] : dados;   // a API retorna um array
+    setOnline(true);
+    ultimaLeitura = (d && d.latitude != null)
+      ? { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude), ts: parseTs(d.timestamp) }
+      : null;
+  } catch (e) { setOnline(false); console.error(e); }
+  atualizarEstado();
+}
+
+function atualizarEstado() {
+  const l = ultimaLeitura;
+  sinalOk = !!l && (MODO_TESTE || Date.now() - l.ts.getTime() <= SINAL_MAX_SEG * 1000);
+
+  if (sinalOk) {
+    if (!busMarker) busMarker = L.marker([l.lat, l.lng], { icon: busIcon }).addTo(map).bindPopup('<b>CIRCULAR</b>');
+    else busMarker.setLatLng([l.lat, l.lng]);
+    if (l !== leituraCentrada) {                      // acompanha o ônibus a cada posição nova
+      leituraCentrada = l;
+      if (centrar && mapaVisivel()) map.panTo([l.lat, l.lng], { animate: true, duration: 0.8 });
+    }
+
+    if (viagem && Date.now() - viagem.tInicio > VIAGEM_MAX_MIN * 60000) { registrar(`viagem ${viagem.it.hora} descartada: passou de ${VIAGEM_MAX_MIN} min`); concluidas.add(chaveDia(viagem.it)); viagem = null; }
+    if (viagem) {
+      const ts = l.ts.getTime();
+      if (ts !== viagem.ultimoTs) {                   // posição nova
+        if (viagem.fase === 'movimento' && ts - viagem.ultimoTs > REENCONTRAR_SEG * 1000) {
+          setFase(viagem, 'localizando', 'ficou ' + Math.round((ts - viagem.ultimoTs) / 1000) + ' s sem posições'); viagem.hist = []; viagem.prox = null;   // ficou sem posições: descobre de novo pelo movimento
+        }
+        viagem.ultimoTs = ts;
+      }
+      viagem.ultimoSinal = Date.now();
+      avancarViagem(l);
+    } else tentarIniciarViagem(l);
+  } else {
+    if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+    if (viagem) {
+      if (viagem.fase === 'sinal' || viagem.fase === 'pronto') { registrar(`viagem ${viagem.it.hora} desfeita: ônibus parou de enviar antes de sair`); viagem = null; }    // ainda nem saiu: volta a aguardar a saída
+      else if (Date.now() - viagem.ultimoSinal > SEM_SINAL_CANCELA_MIN * 60000) {  // perdeu o sinal no trajeto
+        registrar(`viagem ${viagem.it.hora} abandonada: ${SEM_SINAL_CANCELA_MIN} min sem sinal no trajeto`);
+        concluidas.add(chaveDia(viagem.it)); viagem = null;
+      }
+    }
+  }
+  atualizarPainel();
+}
+
+// ── PAINÉIS ──────────────────────────────────────────────────
+function atualizarPainel() {
+  const l = ultimaLeitura;
+  const proxVis = proximaVisivel();             // índice da PRÓXIMA parada; null enquanto o ônibus não está em movimento
+
+  // monitor: "PRÓXIMA PARADA" + nome só quando o ônibus está em movimento; nas demais fases só uma mensagem
+  let nome, mostrarProxima = false, dist = '—', chegando = false, prog = 0;
+  const enc = encerradaVigente();
+  if (viagem && !sinalOk) {
+    nome = 'AGUARDANDO ÔNIBUS';                                   // perdeu o sinal no trajeto
+  } else if (viagem && proxVis === null) {
+    if (viagem.fase === 'sinal')            nome = `AGUARDANDO SAÍDA DAS ${viagem.it.hora}`;
+    else if (viagem.fase === 'pronto')      nome = PARADAS[viagem.seq[0]].nome;
+    else                                    nome = 'LOCALIZANDO PRÓXIMA PARADA...';
+  } else if (viagem) {
+    mostrarProxima = true;
+    const v = viagem;
+    const posV   = v.seq.indexOf(v.prox);
+    const antIdx = posV > 0 ? v.seq[posV - 1] : -1;                // parada anterior deste horário
+    const p = PARADAS[v.prox], ant = antIdx >= 0 ? PARADAS[antIdx] : undefined;
+    const reta = distancia(l.lat, l.lng, p.lat, p.lng);
+    const rota = distanciaPorRota(l, v.prox, antIdx);
+    const d    = rota !== null ? Math.max(rota, reta) : reta;     // pela rota nunca é menor que a linha reta
+    nome = p.nome; dist = Math.round(d);
+    chegando = reta < CHEGADA_METROS || v.fase === 'chegada';      // nome em verde
+    const dEntre = !ant ? 0 : rotaTemTrecho(antIdx, v.prox) ? ROTA_INFO.s[v.prox] - ROTA_INFO.s[antIdx]
+                                                              : distancia(ant.lat, ant.lng, p.lat, p.lng);
+    if (dEntre > 0) prog = Math.max(0, Math.min(100, (1 - d / dEntre) * 100));
+  } else if (enc) {
+    nome = `ROTA DAS ${enc.hora} ENCERRADA`;
+  } else {
+    const it = itinerarioPorHorario();
+    nome = it ? `AGUARDANDO SAÍDA DAS ${it.hora}` : 'AGUARDANDO ÔNIBUS';
+  }
+  document.getElementById('next-stop-label').style.display = mostrarProxima ? '' : 'none';
+  document.querySelector('.monitor-right').style.display   = mostrarProxima ? '' : 'none';   // distância só com "PRÓXIMA PARADA"
+  const nomeEl = document.getElementById('next-stop-name');
+  nomeEl.textContent = nome;
+  nomeEl.className   = 'monitor-stop-name' + (chegando ? ' arriving' : '');
+  document.getElementById('next-stop-dist').textContent = dist;
+  document.getElementById('next-monitor').style.setProperty('--progress', (mostrarProxima ? prog : 0) + '%');   // barra idem
+
+  // barra inferior
+  document.getElementById('last-update').textContent = l
+    ? l.ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  document.getElementById('accuracy').textContent = '—';
+  const cor = itinerarioCorrente();
+  document.getElementById('itin-info').textContent = cor ? cor.hora : '—';
+  document.getElementById('stop-counter').textContent = proxVis !== null ? `${viagem.seq.indexOf(proxVis) + 1}/${viagem.seq.length}` : '—/—';
+
+  // listas de paradas: cada lista mostra só as paradas do seu horário
+  const itinMostraViagem = proxVis !== null && (!itinSelecionado || itinSelecionado === viagem.it.id);
+  const seqLateral = seqCorrente(), seqItin = seqDe(itinExibido());
+  document.querySelectorAll('.stop-item').forEach(el => {
+    const i = +el.dataset.idx;
+    const naItin = !!el.closest('#itin-stops-list');
+    const seq  = naItin ? seqItin : seqLateral;
+    const pos  = seq.indexOf(i);
+    const vale = (naItin ? itinMostraViagem : proxVis !== null) && pos >= 0;
+    const posProx = proxVis !== null ? seq.indexOf(proxVis) : -1;
+    el.classList.toggle('hidden', pos < 0);
+    el.classList.toggle('passed', vale && pos < posProx);
+    el.classList.toggle('active', vale && i === proxVis);
+    if (naItin) el.style.setProperty('--prog', (vale && i === proxVis ? prog : 0) + '%');   // preenchimento da próxima parada
+  });
+  // marcadores
+  PARADAS.forEach((p, i) => {
+    const pos = seqLateral.indexOf(i), posProx = proxVis !== null ? seqLateral.indexOf(proxVis) : -1;
+    const est = pos < 0 ? 'skipped' : proxVis !== null ? (pos < posProx ? 'passed' : i === proxVis ? 'next' : '') : '';
+    if (estadoMarkers[i] !== est) { estadoMarkers[i] = est; stopMarkers[i].setIcon(makeStopIcon(est)); }
+  });
+  const ativo = proxVis !== null ? proxVis : -1;
+  if (ativo !== ultimoAtivo) { ultimoAtivo = ativo; rolarAtivo(); }
+
+  atualizarItinerarios(false);
+  atualizarAviso();
+  atualizarRotaMapa();
+  atualizarDebug();
+}
+
+function setOnline(online) {
+  const pill = document.getElementById('live-pill');
+  pill.className = 'live-pill' + (online ? '' : ' offline');
+  pill.innerHTML = `<div class="live-dot"></div> ${online ? (SIM ? 'SIMULAÇÃO' : 'AO VIVO') : 'SEM CONEXÃO'}`;
+}
+
+// Aviso no mapa e em itinerários: sem sinal (vermelho) ou ônibus online (turquesa)
+function atualizarAviso() {
+  const mapa = document.getElementById('no-signal'), itin = document.getElementById('itin-sem-sinal');
+  let htmlMapa, htmlItin;
+  if (!sinalOk) {
+    htmlMapa = '<h2>SEM SINAL DO ÔNIBUS</h2>';
+    htmlItin = '<b>SEM SINAL</b>O ônibus ainda não iniciou o rastreamento.';
+  } else {
+    const it = viagem ? viagem.it : itinerarioPorHorario();
+    const emRota = viagem && (viagem.fase === 'movimento' || viagem.fase === 'chegada');
+    const txt = emRota && it ? `CIRCULAR EM DESLOCAMENTO ROTA DAS ${it.hora}`   // ônibus em movimento
+      : 'CIRCULAR ONLINE';                                                       // enviando localização, ainda não saiu
+    htmlMapa = `<h2>${esc(txt)}</h2>`;
+    htmlItin = esc(txt);
+  }
+  if (mapa.innerHTML !== htmlMapa) mapa.innerHTML = htmlMapa;
+  mapa.style.display = 'flex';
+  mapa.classList.toggle('online', sinalOk);
+  if (itin.innerHTML !== htmlItin) itin.innerHTML = htmlItin;
+  itin.classList.remove('hidden');
+  itin.classList.toggle('online', sinalOk);
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────
+const mapaVisivel = () => !document.getElementById('view-map').classList.contains('hidden');
+
+let mapaAberto = false;
+
+function mostrarTela(nome) {
+  ['home', 'itin', 'map'].forEach(n =>
+    document.getElementById('view-' + n).classList.toggle('hidden', n !== nome));
+  if (nome === 'map') {
+    map.invalidateSize();
+    if (!mapaAberto) {   // primeira vez que o mapa aparece: vai para a vista inicial (ou para o ônibus, se houver sinal)
+      mapaAberto = true;
+      map.setView(busMarker ? busMarker.getLatLng() : [MAPA_INICIAL.lat, MAPA_INICIAL.lng], MAPA_INICIAL.zoom, { animate: false });
+    } else if (busMarker && centrar) map.panTo(busMarker.getLatLng(), { animate: false });
+    rolarAtivo();
+  }
+  if (nome === 'itin') { atualizarItinerarios(true); rolarAtivo(); }
+}
+
+function centralizar() {
+  centrar = true;
+  if (busMarker) map.panTo(busMarker.getLatLng(), { animate: true });
+  else map.setView([MAPA_INICIAL.lat, MAPA_INICIAL.lng], MAPA_INICIAL.zoom, { animate: true });
+}
+
+map.on('dragstart', () => { centrar = false; });
+
+
+// ── COORDENADAS DO CENTRO DO MAPA ────────────────────────────
+// Mostra lat/lng/zoom do centro do mapa (útil para escolher MAPA_INICIAL).
+// Tudo está dentro desta função: para esconder, comente só a linha da chamada logo abaixo.
+function mostrarCoordenadasCentro() {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:absolute;left:50%;bottom:6px;transform: translate(-50%,0);z-index:1000;pointer-events:none;' +
+                 'width: fit-content;background:rgba(10,10,10,0.85);color:#e8e8e8;border:1px solid #444;border-radius:4px;' +
+                 'padding:4px 8px;font:11px "IBM Plex Mono",monospace;white-space: nowrap;';
+  map.getContainer().appendChild(el);
+  const atualizar = () => {
+    const c = map.getCenter();
+    el.textContent = `lat ${c.lat.toFixed(6)}  lng ${c.lng.toFixed(6)}  zoom ${map.getZoom()}`;
+  };
+  map.on('move zoom', atualizar);
+  atualizar();
+	
+}
+mostrarCoordenadasCentro();   // ← comente esta linha para esconder as coordenadas
+
+// ── COORDENADA DO CLIQUE ─────────────────────────────────────
+// Ao clicar no mapa, abre um popup com a latitude e a longitude do ponto clicado
+// (já no formato "lat, lng", pronto para copiar para paradas.txt / pontos_de_passagem.txt).
+// Tudo está dentro desta função: para desativar, comente só a linha da chamada logo abaixo.
+function mostrarCoordenadaAoClicar() {
+  map.on('click', function (e) {
+    const lat = e.latlng.lat.toFixed(6), lng = e.latlng.lng.toFixed(6);
+    L.popup()
+      .setLatLng(e.latlng)
+      .setContent(`<b>Coordenada</b><br>lat: ${lat}<br>lng: ${lng}<br><small>${lat}, ${lng}</small>`)
+      .openOn(map);
+  });
+}
+mostrarCoordenadaAoClicar();   // ← comente esta linha para desativar o popup de coordenadas
+
+// ── INÍCIO ───────────────────────────────────────────────────
+(async function iniciar() {
+  try {
+    const [txtP, txtH] = await Promise.all([carregarTexto(ARQ_PARADAS), carregarTexto(ARQ_HORARIOS)]);
+    TXT_HORARIOS = txtH;
+    PARADAS = parseParadas(txtP);
+    const h = parseHorarios(txtH);
+    HORARIOS = h.itens; PERIODOS = h.periodos;
+    if (!PARADAS.length)  throw new Error(`${ARQ_PARADAS} sem paradas válidas`);
+    if (!HORARIOS.length) throw new Error(`${ARQ_HORARIOS} sem horários válidos`);
+    if (h.ignoradas.length) {
+      console.warn('Linhas ignoradas em ' + ARQ_HORARIOS, h.ignoradas);
+      const box = document.getElementById('erro-dados');
+      box.textContent = `Linhas ignoradas em ${ARQ_HORARIOS} (formato esperado: Turno,HH:MM,{ids}): ` + h.ignoradas.join(' | ');
+      box.classList.remove('hidden');
+    }
+  } catch (e) { mostrarErroDados(e); return; }
+
+  // waypoints da rota por horário (sem eles o app funciona, só não desenha a rota)
+  try {
+    const [txtPt, txtR] = await Promise.all([carregarTexto(ARQ_PONTOS), carregarTexto(ARQ_ROTAS)]);
+    PONTOS = parsePontos(txtPt); ROTAS = parseRotas(txtR);
+    if (!Object.keys(PONTOS).length || !Object.keys(ROTAS).length) throw new Error('arquivo vazio ou em formato inesperado');
+    HORARIOS.filter(x => !ROTAS[x.id]).forEach(x => console.warn(`${ARQ_ROTAS}: sem rota para ${x.id}`));
+    Object.entries(ROTAS).forEach(([k, ids]) => ids.filter(id => !PONTOS[id]).forEach(id => console.warn(`${ARQ_ROTAS}: ${k} usa o ponto ${id}, que não existe em ${ARQ_PONTOS}`)));
+  } catch (e) {
+    console.warn('Rota do mapa não carregada', e);
+    const box = document.getElementById('erro-dados');
+    box.textContent = `Não foi possível carregar ${ARQ_PONTOS} / ${ARQ_ROTAS}: a rota não será desenhada no mapa. Detalhe: ${e.message}`;
+    box.classList.remove('hidden');
+  }
+
+  if (new URLSearchParams(location.search).has('debug')) {
+    const box = document.getElementById('erro-dados');
+    const porTurno = PERIODOS.map(p => p + ': ' + HORARIOS.filter(x => x.periodo === p)
+      .map(x => `${x.hora}(${x.ids.length} paradas, ${(ROTAS[x.id] || []).length} pontos)`).join(', ')).join('\n');
+    box.style.whiteSpace = 'pre-wrap';
+    box.textContent = `DIAGNÓSTICO · versão ${VERSAO}\n` +
+      `${ARQ_HORARIOS} carregado de: ${new URL(ARQ_HORARIOS, location.href).href}\n` +
+      `${TXT_HORARIOS.length} caracteres, ${TXT_HORARIOS.split(/\r?\n/).filter(l => l.trim()).length} linhas · ${PARADAS.length} paradas · ${Object.keys(PONTOS).length} pontos de passagem · ${Object.keys(ROTAS).length} rotas\n\n` +
+      porTurno + '\n\nLinhas cruas:\n' + TXT_HORARIOS.split(/\r?\n/).filter(l => l.trim()).map(l => JSON.stringify(l)).join('\n');
+    box.classList.remove('hidden');
+  }
+
+  iniciarSimulacao();                  // ?simular18:10 — muda o relógio da página e simula o ônibus
+  renderizarParadas();
+  prepararRota();
+  renderAbas();
+  const cor = itinerarioPorHorario();
+  selecionarAba(cor ? cor.periodo : PERIODOS[0]);
+  atualizarRotaMapa();
+
+  buscarLocalizacao();
+  setInterval(buscarLocalizacao, SIM ? 1000 : POLL_INTERVAL);   // na simulação o ônibus de mentira "envia" a cada segundo
+  setInterval(atualizarEstado, 1000);   // relógio: espera de 20 s, 15 s do fim da rota, trocas de mensagem por horário
+})();
+
+</script>
+</body>
+</html>
