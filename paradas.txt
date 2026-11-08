@@ -3,7 +3,7 @@
 { id: 3,  nome: 'CAPELA',  lat: -5.658251, lng: -36.605946 },
 { id: 4,  nome: 'PADARIA',  lat: -5.661606, lng: -36.607923 },
 { id: 5,  nome: 'RESIDENCIA',  lat: -5.664248, lng: -36.608457 },
-{ id: 6,  nome: 'INSS', lat: -5.666560, lng: -36.600905 },
+{ id: 6,  nome: 'INSS', lat: -5.665914, -36.604600 },
 { id: 7,  nome: 'MADEIREIRA ESPERANÇA',  lat: -5.669386, lng: -36.606593 },
 { id: 8,  nome: 'CHURRASCARIA LOPINHO',  lat: -5.671014, lng: -36.606317 },
 { id: 9,  nome: 'BATALHÃO DA PM',  lat: -5.672552, lng: -36.602465 },
