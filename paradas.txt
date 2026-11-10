@@ -2,7 +2,7 @@
 { id: 2,  nome: 'RES. CANAÃ (IDA)',  lat: -5.657239,  lng:-36.607572  },
 { id: 3,  nome: 'CAPELA NOSSA SENHORA DAS GRAÇAS',  lat: -5.658251, lng: -36.605946 },
 { id: 4,  nome: 'PANIFICADORA E PIZZARIA MANÁ',  lat: -5.661606, lng: -36.607923 },
-{ id: 5,  nome: 'RESIDENCIA UNIVERSITÁRIA',  lat: -5.664248, lng: -36.608457 },
+{ id: 5,  nome: 'RESIDÊNCIA UNIVERSITÁRIA',  lat: -5.664248, lng: -36.608457 },
 { id: 6,  nome: 'INSS', lat: -5.665914, lng: -36.604600 },
 { id: 7,  nome: 'MADEIREIRA ESPERANÇA',  lat: -5.669435, lng: -36.606629 },
 { id: 8,  nome: 'CHURRASCARIA LOPINHO',  lat: -5.671012, lng: -36.606368 },
