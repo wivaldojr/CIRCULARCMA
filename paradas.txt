@@ -6,7 +6,7 @@
 { id: 6,  nome: 'INSS', lat: -5.665914, lng: -36.604600 },
 { id: 7,  nome: 'MADEIREIRA ESPERANÇA',  lat: -5.669435, lng: -36.606629 },
 { id: 8,  nome: 'CHURRASCARIA LOPINHO',  lat: -5.671012, lng: -36.606368 },
-{ id: 9,  nome: 'POLÍCIA MILITAR - 2ª CIA',  lat: -5.672634, lng: -36.602423 },
+{ id: 9,  nome: 'POLÍCIA MILITAR - 2ª CIA',  lat: -5.672538, lng: -36.602429 },
 { id: 10, nome: 'ROTATÓRIA VIP ACADEMIA',  lat: -5.672012, lng: -36.60111  },
 { id: 11, nome: 'HOSPITAL REGIONAL DE ANGICOS',  lat: -5.669474, lng:  -36.600327  },
 { id: 12, nome: 'E. E. FRANCISCO VERAS',  lat: -5.668108, lng: -36.600974 },
