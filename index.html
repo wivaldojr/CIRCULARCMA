@@ -1647,7 +1647,7 @@ function atualizarAviso() {
   let htmlMapa, htmlItin;
   if (!sinalOk) {
     htmlMapa = '<h2>SEM SINAL DO ÔNIBUS</h2>';
-    htmlItin = '<b>SEM SINAL</b>O ônibus ainda não iniciou o rastreamento.';
+    htmlItin = '<b>SEM SINAL DO ÔNIBUS</b>';//</b>O ônibus ainda não iniciou o rastreamento.';
   } else {
     const it = viagem ? viagem.it : itinerarioPorHorario();
     const emRota = viagem && (viagem.fase === 'movimento' || viagem.fase === 'chegada');
